@@ -1,6 +1,5 @@
 {
   "name": "alnov-finance",
-  "private": true,
   "version": "1.0.0",
   "type": "module",
   "scripts": {
@@ -8,8 +7,7 @@
     "build": "vite build",
     "preview": "vite preview"
   },
-  "dependencies": {
-    "@supabase/supabase-js": "^2.57.4",
-    "vite": "^7.1.7"
+  "devDependencies": {
+    "vite": "^7.3.6"
   }
 }
