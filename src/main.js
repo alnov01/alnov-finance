@@ -236,17 +236,16 @@ const dummyTransactions = [
   {date:"2026-08-01",type:"Allocation",description:"Saving",category:"Saving",amount:8083899,member:"Household",account:""},
 
 
-  // ================= SEPTEMBER =================
-  // Data September yang sebelumnya sudah ada
+// ================= SEPTEMBER =================
 
   {date:"2026-09-01",type:"Income",description:"UNTAN",category:"Formal Salary",amount:3952600,member:"Novia",account:"BNI 198"},
+
+  {date:"2026-09-01",type:"Income",description:"MOD",category:"Mod / Side Income",amount:210000,member:"Ali",account:"DANA 444"},
+
   {date:"2026-09-01",type:"Expense",description:"Botol Susu Avent PPSU 260",category:"Kids",amount:287310,member:"Novia",account:"BNI 198"},
-  {date:"2026-09-02",type:"Expense",description:"Groceries",category:"Groceries",amount:420000,member:"Ali",account:"BCA 029"},
-  {date:"2026-09-03",type:"Expense",description:"Electricity & utilities",category:"Household & Utilities",amount:560000,member:"Ali",account:"BLU 908"},
-  {date:"2026-09-05",type:"Income",description:"Consulting Project",category:"Consulting / Project",amount:2100000,member:"Novia",account:"MANDIRI 138"},
-  {date:"2026-09-06",type:"Expense",description:"Family meal",category:"Meals & Drinks",amount:350000,member:"Ali",account:"CASH"},
-  {date:"2026-09-08",type:"Expense",description:"Healthcare",category:"Healthcare",amount:275000,member:"Novia",account:"BSI 072"},
-  {date:"2026-09-10",type:"Expense",description:"Subscription",category:"Subscription & Digital",amount:99000,member:"Ali",account:"DANA 444"}
+
+  {date:"2026-09-01",type:"Expense",description:"Korek Telinga + Plastik",category:"Household & Utilities",amount:17996,member:"Novia",account:"BNI 198"}
+
 ];
 
 
