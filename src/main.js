@@ -1,4 +1,5 @@
 import "./style.css";
+
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = "https://orukpqlpqbjwdsvwrrcy.supabase.co";
@@ -9,6 +10,7 @@ const supabase = createClient(
   SUPABASE_KEY
 );
 
+const accounts = [
 
 // =====================================================
 // STATIC DATA
@@ -547,9 +549,7 @@ function login(){
 
       <div class="login-card">
 
-        <div class="logo big">
-          ♡
-        </div>
+        <div class="logo big">♡</div>
 
         <p class="eyebrow">
           ALNOV FINANCE
@@ -560,53 +560,42 @@ function login(){
         </h1>
 
         <p class="muted">
-          A calm, private space for Ali &
-          Novia to manage household money.
+          A calm, private space for Ali & Novia
+          to manage household money.
         </p>
 
-
-        <form id="loginForm">
+        <form id="login-form">
 
           <label>
-
             Email
-
             <input
-              id="loginEmail"
+              id="email"
               type="email"
-              placeholder="Email"
+              placeholder="Enter your email"
               required>
-
           </label>
-
 
           <label>
-
             Password
-
             <input
-              id="loginPassword"
+              id="password"
               type="password"
-              placeholder="Password"
+              placeholder="Enter your password"
               required>
-
           </label>
-
 
           <button
-            id="loginSubmit"
-            type="submit">
-
-            Login
-
+            type="submit"
+            class="save">
+            Log in
           </button>
 
+          <p
+            id="login-error"
+            class="demo">
+          </p>
+
         </form>
-
-
-        <p class="demo">
-          Private household finance
-        </p>
 
       </div>
 
@@ -614,25 +603,47 @@ function login(){
 
   `;
 
-
   document
-    .querySelector("#loginForm")
-    .addEventListener("submit",async e=>{
+    .querySelector("#login-form")
+    .addEventListener("submit", async e => {
 
       e.preventDefault();
 
       const email =
-        document.querySelector("#loginEmail").value.trim();
+        document.querySelector("#email").value.trim();
 
       const password =
-        document.querySelector("#loginPassword").value;
+        document.querySelector("#password").value;
 
-      await loginUser(email,password);
+      const error =
+        document.querySelector("#login-error");
+
+      error.textContent = "Logging in...";
+
+      const { data, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+      if(authError){
+
+        error.textContent =
+          authError.message;
+
+        return;
+      }
+
+      state.user =
+        data.user.email;
+
+      await loadTransactions();
+
+      app();
 
     });
 
 }
-
 
 // =====================================================
 // DASHBOARD
