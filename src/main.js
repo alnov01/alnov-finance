@@ -1,11 +1,7 @@
 import "./style.css";
 import { createClient } from "@supabase/supabase-js";
 
-/* =========================================================
-   SUPABASE
-========================================================= */
-
-const SUPABASE_URL = "PASTE_PROJECT_URL_KAMU_DI_SINI";
+const SUPABASE_URL = "https://orukpqlpqbjwdsvwrrcy.supabase.co";
 const SUPABASE_KEY = "sb_publishable_X1oq32vSXVyMFjCAmbOkcw_i4lhIxSh";
 
 const supabase = createClient(
@@ -14,9 +10,9 @@ const supabase = createClient(
 );
 
 
-/* =========================================================
-   MASTER DATA
-========================================================= */
+// =====================================================
+// STATIC DATA
+// =====================================================
 
 const accounts = [
   ["BCA 029",4964028],
@@ -81,30 +77,18 @@ const categories = [
 ];
 
 
-/* =========================================================
-   STATE
-========================================================= */
+// =====================================================
+// APP STATE
+// =====================================================
 
 let state = {
-  user:null,
-  month:"September",
-  year:2026,
-  transactions:[],
-  page:"dashboard",
-  loading:false
+  user: null,
+  month: "September",
+  year: 2026,
+  transactions: [],
+  page: "dashboard",
+  loading: false
 };
-
-
-/* =========================================================
-   HELPERS
-========================================================= */
-
-const money = n =>
-  new Intl.NumberFormat("id-ID",{
-    style:"currency",
-    currency:"IDR",
-    maximumFractionDigits:0
-  }).format(Number(n)||0);
 
 const monthNum = {
   January:1,
@@ -121,16 +105,102 @@ const monthNum = {
   December:12
 };
 
+const money = n =>
+  new Intl.NumberFormat("id-ID", {
+    style:"currency",
+    currency:"IDR",
+    maximumFractionDigits:0
+  }).format(Number(n) || 0);
 
-/* =========================================================
-   LOAD TRANSACTIONS FROM SUPABASE
-========================================================= */
+
+// =====================================================
+// AUTH
+// =====================================================
+
+async function checkSession(){
+
+  const {
+    data:{session}
+  } = await supabase.auth.getSession();
+
+  if(session){
+
+    state.user =
+      session.user.user_metadata?.name ||
+      session.user.email?.split("@")[0] ||
+      "User";
+
+    await loadTransactions();
+
+  }else{
+
+    state.user = null;
+    state.transactions = [];
+
+  }
+
+  app();
+}
+
+
+async function loginUser(email,password){
+
+  const button = document.querySelector("#loginSubmit");
+
+  if(button){
+    button.disabled = true;
+    button.textContent = "Signing in...";
+  }
+
+  const {data,error} =
+    await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+  if(error){
+
+    alert("Login gagal: " + error.message);
+
+    if(button){
+      button.disabled = false;
+      button.textContent = "Login";
+    }
+
+    return;
+  }
+
+  state.user =
+    data.user.user_metadata?.name ||
+    data.user.email?.split("@")[0] ||
+    "User";
+
+  await loadTransactions();
+
+  app();
+}
+
+
+async function logout(){
+
+  await supabase.auth.signOut();
+
+  state.user = null;
+  state.transactions = [];
+
+  app();
+}
+
+
+// =====================================================
+// DATABASE
+// =====================================================
 
 async function loadTransactions(){
 
   state.loading = true;
 
-  const { data, error } = await supabase
+  const {data,error} = await supabase
     .from("transactions")
     .select("*")
     .order("date",{ascending:false});
@@ -142,27 +212,38 @@ async function loadTransactions(){
     console.error(error);
 
     alert(
-      "Gagal mengambil data transaksi dari database.\n\n" +
+      "Gagal mengambil data transaksi dari Supabase.\n\n" +
       error.message
     );
+
+    state.transactions = [];
 
     return;
   }
 
-  state.transactions = data || [];
-
+  state.transactions = (data || []).map(t => ({
+    ...t,
+    amount:Number(t.amount)
+  }));
 }
 
 
-/* =========================================================
-   ADD TRANSACTION TO SUPABASE
-========================================================= */
-
 async function saveTransaction(transaction){
 
-  const { error } = await supabase
-    .from("transactions")
-    .insert([transaction]);
+  const {data,error} =
+    await supabase
+      .from("transactions")
+      .insert([{
+        date: transaction.date,
+        type: transaction.type,
+        description: transaction.description,
+        category: transaction.category,
+        amount: Number(transaction.amount),
+        member: transaction.member,
+        account: transaction.account
+      }])
+      .select()
+      .single();
 
   if(error){
 
@@ -176,48 +257,46 @@ async function saveTransaction(transaction){
     return false;
   }
 
+  state.transactions.unshift({
+    ...data,
+    amount:Number(data.amount)
+  });
+
   return true;
 }
 
 
-/* =========================================================
-   METRICS
-========================================================= */
+// =====================================================
+// METRICS
+// =====================================================
 
 function metrics(){
 
   const month =
     String(monthNum[state.month]).padStart(2,"0");
 
+  const prefix =
+    `${state.year}-${month}`;
+
   const tx =
     state.transactions.filter(t =>
-      String(t.date || "")
-      .startsWith(`${state.year}-${month}`)
+      String(t.date).startsWith(prefix)
     );
 
   const income =
     tx
       .filter(t=>t.type==="Income")
-      .reduce(
-        (a,t)=>a+Number(t.amount||0),
-        0
-      );
+      .reduce((a,t)=>a+Number(t.amount),0);
 
   const expense =
     tx
       .filter(t=>t.type==="Expense")
-      .reduce(
-        (a,t)=>a+Number(t.amount||0),
-        0
-      );
+      .reduce((a,t)=>a+Number(t.amount),0);
 
   const allocation =
     tx
       .filter(t=>t.type==="Allocation")
-      .reduce(
-        (a,t)=>a+Number(t.amount||0),
-        0
-      );
+      .reduce((a,t)=>a+Number(t.amount),0);
 
   const net =
     income-expense-allocation;
@@ -230,11 +309,7 @@ function metrics(){
   let health =
     50 +
     (net>=0 ? 20 : 0) +
-    (savings>=20
-      ? 20
-      : savings>=10
-      ? 10
-      : 0);
+    (savings>=20 ? 20 : savings>=10 ? 10 : 0);
 
   return {
     tx,
@@ -251,10 +326,6 @@ function metrics(){
 }
 
 
-/* =========================================================
-   GROUP
-========================================================= */
-
 function groupByCategory(tx,type){
 
   const m={};
@@ -269,8 +340,8 @@ function groupByCategory(tx,type){
         "Others";
 
       m[key] =
-        (m[key]||0) +
-        Number(t.amount||0);
+        (m[key] || 0) +
+        Number(t.amount);
 
     });
 
@@ -280,10 +351,6 @@ function groupByCategory(tx,type){
     .slice(0,5);
 }
 
-
-/* =========================================================
-   CARD
-========================================================= */
 
 function card(title,value,sub=""){
 
@@ -307,20 +374,14 @@ function card(title,value,sub=""){
 }
 
 
-/* =========================================================
-   APP
-========================================================= */
+// =====================================================
+// APP
+// =====================================================
 
-async function app(){
+function app(){
 
-  if(!state.user){
-
-    login();
-
-    return;
-  }
-
-  await loadTransactions();
+  if(!state.user)
+    return login();
 
   document.querySelector("#root").innerHTML=`
 
@@ -335,13 +396,10 @@ async function app(){
           </div>
 
           <div>
-
             <b>ALNOV</b>
-
             <span>
               Household Finance
             </span>
-
           </div>
 
         </div>
@@ -392,7 +450,7 @@ async function app(){
           <div class="member">
 
             <span class="avatar">
-              ${state.user[0]}
+              ${state.user[0].toUpperCase()}
             </span>
 
             <div>
@@ -435,14 +493,12 @@ async function app(){
             </p>
 
             <h1>
-
               ${
                 state.page==="dashboard"
                 ? "Your money, made calmer."
-                : state.page[0].toUpperCase()
-                  + state.page.slice(1)
+                : state.page[0].toUpperCase() +
+                  state.page.slice(1)
               }
-
             </h1>
 
           </div>
@@ -472,15 +528,16 @@ async function app(){
       </main>
 
     </div>
+
   `;
 
   bind();
 }
 
 
-/* =========================================================
-   LOGIN
-========================================================= */
+// =====================================================
+// LOGIN SCREEN
+// =====================================================
 
 function login(){
 
@@ -508,65 +565,88 @@ function login(){
         </p>
 
 
-        <div class="login-buttons">
+        <form id="loginForm">
 
-          <button data-login="Ali">
-            Continue as Ali
+          <label>
+
+            Email
+
+            <input
+              id="loginEmail"
+              type="email"
+              placeholder="Email"
+              required>
+
+          </label>
+
+
+          <label>
+
+            Password
+
+            <input
+              id="loginPassword"
+              type="password"
+              placeholder="Password"
+              required>
+
+          </label>
+
+
+          <button
+            id="loginSubmit"
+            type="submit">
+
+            Login
+
           </button>
 
-          <button data-login="Novia">
-            Continue as Novia
-          </button>
-
-        </div>
+        </form>
 
 
         <p class="demo">
-          Connected to Supabase
+          Private household finance
         </p>
 
       </div>
 
     </div>
+
   `;
 
 
   document
-    .querySelectorAll("[data-login]")
-    .forEach(button=>{
+    .querySelector("#loginForm")
+    .addEventListener("submit",async e=>{
 
-      button.onclick=()=>{
+      e.preventDefault();
 
-        state.user =
-          button.dataset.login;
+      const email =
+        document.querySelector("#loginEmail").value.trim();
 
-        app();
+      const password =
+        document.querySelector("#loginPassword").value;
 
-      };
+      await loginUser(email,password);
 
     });
+
 }
 
 
-/* =========================================================
-   DASHBOARD
-========================================================= */
+// =====================================================
+// DASHBOARD
+// =====================================================
 
 function dashboard(){
 
   const m=metrics();
 
   const spend =
-    groupByCategory(
-      m.tx,
-      "Expense"
-    );
+    groupByCategory(m.tx,"Expense");
 
   const inc =
-    groupByCategory(
-      m.tx,
-      "Income"
-    );
+    groupByCategory(m.tx,"Income");
 
   return `
 
@@ -574,28 +654,17 @@ function dashboard(){
 
       <div>
 
-        <span>
-          MONTH
-        </span>
-
+        <span>MONTH</span>
 
         <select id="month">
 
           ${
             Object.keys(monthNum)
               .map(x=>`
-
                 <option
-                  ${
-                    x===state.month
-                    ?"selected"
-                    :""
-                  }>
-
+                  ${x===state.month?"selected":""}>
                   ${x}
-
                 </option>
-
               `)
               .join("")
           }
@@ -605,9 +674,7 @@ function dashboard(){
 
         <select id="year">
 
-          <option>
-            2026
-          </option>
+          <option>2026</option>
 
         </select>
 
@@ -615,7 +682,7 @@ function dashboard(){
 
 
       <div class="pill">
-        ● Live database
+        ● Supabase database
       </div>
 
     </section>
@@ -632,7 +699,7 @@ function dashboard(){
       ${card(
         "Net expense",
         money(m.expense),
-        "Total spending"
+        "After essential spending"
       )}
 
       ${card(
@@ -666,17 +733,11 @@ function dashboard(){
             </span>
 
             <h2>
-
               ${m.health}
-
-              <small>
-                /100
-              </small>
-
+              <small>/100</small>
             </h2>
 
           </div>
-
 
           <div
             class="health-ring"
@@ -721,14 +782,13 @@ function dashboard(){
             </span>
 
             <h3>
-              ${state.month} ${state.year}
+              ${state.month} 2026
             </h3>
 
           </div>
 
-
           <span class="trend">
-            ${m.tx.length} transactions
+            Household
           </span>
 
         </div>
@@ -747,12 +807,14 @@ function dashboard(){
             </b>
 
             <i
-              style="width:${Math.min(
-                100,
-                m.income/
-                (m.income+m.expense||1)
-                *100
-              )}%">
+              style="width:${
+                Math.min(
+                  100,
+                  m.income /
+                  (m.income+m.expense||1) *
+                  100
+                )
+              }%">
             </i>
 
           </div>
@@ -769,12 +831,14 @@ function dashboard(){
             </b>
 
             <i
-              style="width:${Math.min(
-                100,
-                m.expense/
-                (m.income+m.expense||1)
-                *100
-              )}%">
+              style="width:${
+                Math.min(
+                  100,
+                  m.expense /
+                  (m.income+m.expense||1) *
+                  100
+                )
+              }%">
             </i>
 
           </div>
@@ -879,8 +943,7 @@ function dashboard(){
       <div class="pots">
 
         ${
-          pots
-            .slice(0,5)
+          pots.slice(0,5)
             .map(p=>`
 
               <div class="pot">
@@ -937,9 +1000,9 @@ function dashboard(){
 }
 
 
-/* =========================================================
-   LIST PANEL
-========================================================= */
+// =====================================================
+// LIST PANEL
+// =====================================================
 
 function listPanel(title,items){
 
@@ -965,44 +1028,45 @@ function listPanel(title,items){
 
 
       ${
-        items
-          .map(([k,v])=>`
+        items.length
+        ? items.map(([k,v])=>`
 
-            <div class="rank">
+          <div class="rank">
 
-              <span class="dot"></span>
+            <span class="dot"></span>
 
-              <div>
+            <div>
 
-                <b>
-                  ${k}
-                </b>
+              <b>
+                ${k}
+              </b>
 
-                <small>
-                  ${money(v)}
-                </small>
-
-              </div>
-
-
-              <em>
-                ${
-                  Math.round(
-                    v/
-                    (items[0]?.[1]||1)
-                    *100
-                  )
-                }%
-              </em>
+              <small>
+                ${money(v)}
+              </small>
 
             </div>
 
-          `)
-          .join("")
-          ||
-          `<p class="muted">
+
+            <em>
+              ${
+                Math.round(
+                  v /
+                  (items[0]?.[1]||1) *
+                  100
+                )
+              }%
+            </em>
+
+          </div>
+
+        `).join("")
+        :
+        `
+          <p class="muted">
             No data yet.
-          </p>`
+          </p>
+        `
       }
 
     </div>
@@ -1011,9 +1075,9 @@ function listPanel(title,items){
 }
 
 
-/* =========================================================
-   TRANSACTIONS
-========================================================= */
+// =====================================================
+// TRANSACTIONS
+// =====================================================
 
 function transactions(){
 
@@ -1072,66 +1136,74 @@ function transactions(){
           <tbody>
 
             ${
-              m.tx
-                .map(t=>`
+              m.tx.length
+              ? m.tx.map(t=>`
 
-                  <tr>
+                <tr>
 
-                    <td>
-                      ${t.date}
-                    </td>
+                  <td>
+                    ${t.date}
+                  </td>
 
+                  <td>
 
-                    <td>
+                    <span
+                      class="type ${String(t.type).toLowerCase()}">
 
-                      <span
-                        class="type ${String(
-                          t.type||""
-                        ).toLowerCase()}">
+                      ${t.type}
 
-                        ${t.type}
+                    </span>
 
-                      </span>
-
-                    </td>
+                  </td>
 
 
-                    <td>
-                      ${t.description||"—"}
-                    </td>
+                  <td>
+                    ${t.description}
+                  </td>
 
 
-                    <td>
-                      ${t.category||"—"}
-                    </td>
+                  <td>
+                    ${t.category || "—"}
+                  </td>
 
 
-                    <td>
-                      ${t.member||"—"}
-                    </td>
+                  <td>
+                    ${t.member || "Household"}
+                  </td>
 
 
-                    <td
-                      class="${
-                        t.type==="Expense"
-                        ? "negative"
-                        : "positive"
-                      }">
+                  <td
+                    class="${
+                      t.type==="Expense"
+                      ? "negative"
+                      : "positive"
+                    }">
 
-                      ${
-                        t.type==="Expense"
-                        ? "−"
-                        : "+"
-                      }
+                    ${
+                      t.type==="Expense"
+                      ? "−"
+                      : "+"
+                    }${money(t.amount)}
 
-                      ${money(t.amount)}
+                  </td>
 
-                    </td>
+                </tr>
 
-                  </tr>
+              `).join("")
+              :
+              `
+                <tr>
 
-                `)
-                .join("")
+                  <td
+                    colspan="6"
+                    style="text-align:center">
+
+                    No transactions found.
+
+                  </td>
+
+                </tr>
+              `
             }
 
           </tbody>
@@ -1146,9 +1218,9 @@ function transactions(){
 }
 
 
-/* =========================================================
-   POTS
-========================================================= */
+// =====================================================
+// POTS
+// =====================================================
 
 function potsPage(){
 
@@ -1176,51 +1248,49 @@ function potsPage(){
       <div class="pots-grid">
 
         ${
-          pots
-            .map(p=>`
+          pots.map(p=>`
 
-              <div class="goal">
+            <div class="goal">
 
-                <div class="pot-icon">
-                  ♡
-                </div>
+              <div class="pot-icon">
+                ♡
+              </div>
 
-                <b>
-                  ${p[0]}
-                </b>
+              <b>
+                ${p[0]}
+              </b>
 
-                <strong>
-                  ${money(p[2])}
-                </strong>
+              <strong>
+                ${money(p[2])}
+              </strong>
 
-                <small>
-                  Target ${
+              <small>
+                Target ${
+                  p[1]
+                  ? money(p[1])
+                  : "—"
+                }
+              </small>
+
+
+              <div class="progress">
+
+                <i
+                  style="width:${
                     p[1]
-                    ? money(p[1])
-                    : "—"
-                  }
-                </small>
-
-
-                <div class="progress">
-
-                  <i
-                    style="width:${
-                      p[1]
-                      ? Math.min(
-                          100,
-                          p[2]/p[1]*100
-                        )
-                      : 0
-                    }%">
-                  </i>
-
-                </div>
+                    ? Math.min(
+                        100,
+                        p[2]/p[1]*100
+                      )
+                    : 0
+                  }%">
+                </i>
 
               </div>
 
-            `)
-            .join("")
+            </div>
+
+          `).join("")
         }
 
       </div>
@@ -1231,9 +1301,9 @@ function potsPage(){
 }
 
 
-/* =========================================================
-   ACCOUNTS
-========================================================= */
+// =====================================================
+// ACCOUNTS
+// =====================================================
 
 function accountsPage(){
 
@@ -1261,37 +1331,33 @@ function accountsPage(){
       <div class="account-grid">
 
         ${
-          accounts
-            .map(a=>`
+          accounts.map(a=>`
 
-              <div class="account">
+            <div class="account">
 
-                <span>
-                  ▣
-                </span>
+              <span>
+                ▣
+              </span>
 
+              <div>
 
-                <div>
+                <b>
+                  ${a[0]}
+                </b>
 
-                  <b>
-                    ${a[0]}
-                  </b>
-
-                  <small>
-                    System balance
-                  </small>
-
-                </div>
-
-
-                <strong>
-                  ${money(a[1])}
-                </strong>
+                <small>
+                  System balance
+                </small>
 
               </div>
 
-            `)
-            .join("")
+              <strong>
+                ${money(a[1])}
+              </strong>
+
+            </div>
+
+          `).join("")
         }
 
       </div>
@@ -1302,21 +1368,25 @@ function accountsPage(){
 }
 
 
-/* =========================================================
-   MODAL
-========================================================= */
+// =====================================================
+// ADD TRANSACTION MODAL
+// =====================================================
 
 function modal(){
 
   document.body.insertAdjacentHTML(
     "beforeend",
+
     `
 
       <div
         class="modal-bg"
         id="modal">
 
-        <form class="modal">
+        <form
+          class="modal"
+          id="transactionForm">
+
 
           <button
             type="button"
@@ -1368,9 +1438,11 @@ function modal(){
             <input
               name="date"
               type="date"
-              value="${new Date()
-                .toISOString()
-                .slice(0,10)}"
+              value="${
+                new Date()
+                  .toISOString()
+                  .slice(0,10)
+              }"
               required>
 
           </label>
@@ -1409,11 +1481,11 @@ function modal(){
 
               ${
                 categories
-                  .map(c=>
-                    `<option>
+                  .map(c=>`
+                    <option>
                       ${c}
-                    </option>`
-                  )
+                    </option>
+                  `)
                   .join("")
               }
 
@@ -1430,11 +1502,11 @@ function modal(){
 
               ${
                 accounts
-                  .map(a=>
-                    `<option>
+                  .map(a=>`
+                    <option>
                       ${a[0]}
-                    </option>`
-                  )
+                    </option>
+                  `)
                   .join("")
               }
 
@@ -1464,7 +1536,8 @@ function modal(){
 
           <button
             class="save"
-            type="submit">
+            type="submit"
+            id="saveTransaction">
 
             Save transaction
 
@@ -1472,9 +1545,9 @@ function modal(){
 
 
           <p class="demo">
-            Transaction will be saved to the
-            household database.
+            Saved securely to Supabase.
           </p>
+
 
         </form>
 
@@ -1487,78 +1560,75 @@ function modal(){
   document
     .querySelector("#close")
     .onclick=()=>{
+
       document
         .querySelector("#modal")
         .remove();
+
     };
 
 
   document
-    .querySelector("#modal form")
+    .querySelector("#transactionForm")
     .onsubmit=async e=>{
 
       e.preventDefault();
 
-      const form =
+      const button =
+        document.querySelector("#saveTransaction");
+
+      button.disabled=true;
+      button.textContent="Saving...";
+
+
+      const f =
         new FormData(e.target);
 
-      const obj =
-        Object.fromEntries(form.entries());
+      const transaction =
+        Object.fromEntries(f.entries());
 
-      obj.amount =
-        Number(obj.amount);
-
-
-      const saveButton =
-        e.target.querySelector(".save");
-
-      saveButton.disabled=true;
-
-      saveButton.textContent=
-        "Saving...";
+      transaction.amount =
+        Number(transaction.amount);
 
 
       const success =
-        await saveTransaction(obj);
+        await saveTransaction(transaction);
 
 
-      if(!success){
+      if(success){
 
-        saveButton.disabled=false;
+        document
+          .querySelector("#modal")
+          .remove();
 
-        saveButton.textContent=
-          "Save transaction";
+        app();
 
-        return;
+      }else{
+
+        button.disabled=false;
+        button.textContent="Save transaction";
+
       }
-
-
-      document
-        .querySelector("#modal")
-        .remove();
-
-
-      await app();
 
     };
 
 }
 
 
-/* =========================================================
-   BIND
-========================================================= */
+// =====================================================
+// BIND
+// =====================================================
 
 function bind(){
 
   document
     .querySelectorAll("[data-page]")
-    .forEach(button=>{
+    .forEach(b=>{
 
-      button.onclick=()=>{
+      b.onclick=()=>{
 
         state.page =
-          button.dataset.page;
+          b.dataset.page;
 
         app();
 
@@ -1571,13 +1641,7 @@ function bind(){
     .querySelector("#logout")
     ?.addEventListener(
       "click",
-      ()=>{
-
-        state.user=null;
-
-        app();
-
-      }
+      logout
     );
 
 
@@ -1614,8 +1678,8 @@ function bind(){
 }
 
 
-/* =========================================================
-   START
-========================================================= */
+// =====================================================
+// START
+// =====================================================
 
-app();
+checkSession();
