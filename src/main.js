@@ -1,10 +1,38 @@
 import "./style.css";
+import { createClient } from "@supabase/supabase-js";
+
+/* =========================================================
+   SUPABASE
+========================================================= */
+
+const SUPABASE_URL = "PASTE_PROJECT_URL_KAMU_DI_SINI";
+const SUPABASE_KEY = "sb_publishable_X1oq32vSXVyMFjCAmbOkcw_i4lhIxSh";
+
+const supabase = createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+
+/* =========================================================
+   MASTER DATA
+========================================================= */
 
 const accounts = [
-  ["BCA 029",4964028],["BLU 908",1936056],["BLU 927",5560073],["BNI 834",305701],
-  ["BNI 198",129879],["BSI 072",17467267],["BSI 115",13145909],["BTN 160",0],
-  ["DANA 444",237950],["DANA 111",17472],["JAGO 100",9792],["MANDIRI 138",100000],
-  ["MANDIRI 146",354576],["CASH",0]
+  ["BCA 029",4964028],
+  ["BLU 908",1936056],
+  ["BLU 927",5560073],
+  ["BNI 834",305701],
+  ["BNI 198",129879],
+  ["BSI 072",17467267],
+  ["BSI 115",13145909],
+  ["BTN 160",0],
+  ["DANA 444",237950],
+  ["DANA 111",17472],
+  ["JAGO 100",9792],
+  ["MANDIRI 138",100000],
+  ["MANDIRI 146",354576],
+  ["CASH",0]
 ];
 
 const pots = [
@@ -48,223 +76,35 @@ const categories = [
   "Vehicles",
   "Formal Salary",
   "Other Variable Income",
-  "Consulting / Project"
+  "Consulting / Project",
+  "Mod / Side Income"
 ];
+
 
 /* =========================================================
-   DATA JANUARI - AGUSTUS
-   Angka di bawah berasal dari workbook ALNOV FINANCE 2026.
-   Untuk mengganti angka real nanti, bagian ini yang diedit.
-   ========================================================= */
-
-const dummyTransactions = [
-
-  // ================= JANUARY =================
-
-  {date:"2026-01-01",type:"Income",description:"Formal Salary",category:"Formal Salary",amount:7970000,member:"Household",account:""},
-  {date:"2026-01-01",type:"Income",description:"Variable Income",category:"Other Variable Income",amount:1410387,member:"Household",account:""},
-
-  {date:"2026-01-01",type:"Expense",description:"Admin & Bank Fees",category:"Admin & Bank Fees",amount:35151,member:"Household",account:""},
-  {date:"2026-01-01",type:"Expense",description:"Eid & Seasonal",category:"Eid & Seasonal",amount:1245000,member:"Household",account:""},
-  {date:"2026-01-01",type:"Expense",description:"Giving & Religious",category:"Giving & Religious",amount:51000,member:"Household",account:""},
-  {date:"2026-01-01",type:"Expense",description:"Groceries",category:"Groceries",amount:1170590,member:"Household",account:""},
-  {date:"2026-01-01",type:"Expense",description:"Healthcare",category:"Healthcare",amount:745000,member:"Household",account:""},
-  {date:"2026-01-01",type:"Expense",description:"Household & Utilities",category:"Household & Utilities",amount:634480,member:"Household",account:""},
-  {date:"2026-01-01",type:"Expense",description:"Kids",category:"Kids",amount:250000,member:"Household",account:""},
-  {date:"2026-01-01",type:"Expense",description:"Lifestyle & Sport",category:"Lifestyle & Sport",amount:85000,member:"Household",account:""},
-  {date:"2026-01-01",type:"Expense",description:"Meals & Drinks",category:"Meals & Drinks",amount:2319120,member:"Household",account:""},
-  {date:"2026-01-01",type:"Expense",description:"Others",category:"Others",amount:9032910,member:"Household",account:""},
-  {date:"2026-01-01",type:"Expense",description:"Personal Care",category:"Personal Care",amount:281840,member:"Household",account:""},
-  {date:"2026-01-01",type:"Expense",description:"Shopping",category:"Shopping",amount:1089480,member:"Household",account:""},
-  {date:"2026-01-01",type:"Expense",description:"Subscription & Digital",category:"Subscription & Digital",amount:46000,member:"Household",account:""},
-  {date:"2026-01-01",type:"Expense",description:"Vehicles",category:"Vehicles",amount:2704940,member:"Household",account:""},
-
-  {date:"2026-01-01",type:"Allocation",description:"Saving",category:"Saving",amount:3800000,member:"Household",account:""},
-
-
-  // ================= FEBRUARY =================
-
-  {date:"2026-02-01",type:"Income",description:"Formal Salary",category:"Formal Salary",amount:7381800,member:"Household",account:""},
-  {date:"2026-02-01",type:"Income",description:"Variable Income",category:"Other Variable Income",amount:2946187,member:"Household",account:""},
-
-  {date:"2026-02-01",type:"Expense",description:"Admin & Bank Fees",category:"Admin & Bank Fees",amount:50335,member:"Household",account:""},
-  {date:"2026-02-01",type:"Expense",description:"Eid & Seasonal",category:"Eid & Seasonal",amount:750000,member:"Household",account:""},
-  {date:"2026-02-01",type:"Expense",description:"Giving & Religious",category:"Giving & Religious",amount:82000,member:"Household",account:""},
-  {date:"2026-02-01",type:"Expense",description:"Groceries",category:"Groceries",amount:174800,member:"Household",account:""},
-  {date:"2026-02-01",type:"Expense",description:"Healthcare",category:"Healthcare",amount:4948650,member:"Household",account:""},
-  {date:"2026-02-01",type:"Expense",description:"Household & Utilities",category:"Household & Utilities",amount:596000,member:"Household",account:""},
-  {date:"2026-02-01",type:"Expense",description:"Kids",category:"Kids",amount:10843500,member:"Household",account:""},
-  {date:"2026-02-01",type:"Expense",description:"Lifestyle & Sport",category:"Lifestyle & Sport",amount:1170000,member:"Household",account:""},
-  {date:"2026-02-01",type:"Expense",description:"Meals & Drinks",category:"Meals & Drinks",amount:1262500,member:"Household",account:""},
-  {date:"2026-02-01",type:"Expense",description:"Others",category:"Others",amount:1851380,member:"Household",account:""},
-  {date:"2026-02-01",type:"Expense",description:"Personal Care",category:"Personal Care",amount:170000,member:"Household",account:""},
-  {date:"2026-02-01",type:"Expense",description:"Shopping",category:"Shopping",amount:1278960,member:"Household",account:""},
-  {date:"2026-02-01",type:"Expense",description:"Vehicles",category:"Vehicles",amount:550000,member:"Household",account:""},
-
-
-  // ================= MARCH =================
-
-  {date:"2026-03-01",type:"Income",description:"Formal Salary",category:"Formal Salary",amount:13557000,member:"Household",account:""},
-  {date:"2026-03-01",type:"Income",description:"Variable Income",category:"Other Variable Income",amount:7221247,member:"Household",account:""},
-
-  {date:"2026-03-01",type:"Expense",description:"Admin & Bank Fees",category:"Admin & Bank Fees",amount:44500,member:"Household",account:""},
-  {date:"2026-03-01",type:"Expense",description:"Eid & Seasonal",category:"Eid & Seasonal",amount:625000,member:"Household",account:""},
-  {date:"2026-03-01",type:"Expense",description:"Giving & Religious",category:"Giving & Religious",amount:653112,member:"Household",account:""},
-  {date:"2026-03-01",type:"Expense",description:"Groceries",category:"Groceries",amount:140000,member:"Household",account:""},
-  {date:"2026-03-01",type:"Expense",description:"Healthcare",category:"Healthcare",amount:1090430,member:"Household",account:""},
-  {date:"2026-03-01",type:"Expense",description:"Household & Utilities",category:"Household & Utilities",amount:1720598,member:"Household",account:""},
-  {date:"2026-03-01",type:"Expense",description:"Kids",category:"Kids",amount:1472230,member:"Household",account:""},
-  {date:"2026-03-01",type:"Expense",description:"Lifestyle & Sport",category:"Lifestyle & Sport",amount:100000,member:"Household",account:""},
-  {date:"2026-03-01",type:"Expense",description:"Loan",category:"Loan",amount:1950000,member:"Household",account:""},
-  {date:"2026-03-01",type:"Expense",description:"Meals & Drinks",category:"Meals & Drinks",amount:2531300,member:"Household",account:""},
-  {date:"2026-03-01",type:"Expense",description:"Others",category:"Others",amount:4947050,member:"Household",account:""},
-  {date:"2026-03-01",type:"Expense",description:"Personal Care",category:"Personal Care",amount:319000,member:"Household",account:""},
-  {date:"2026-03-01",type:"Expense",description:"Shopping",category:"Shopping",amount:260679,member:"Household",account:""},
-  {date:"2026-03-01",type:"Expense",description:"Vehicles",category:"Vehicles",amount:550000,member:"Household",account:""},
-
-  {date:"2026-03-01",type:"Allocation",description:"Saving",category:"Saving",amount:2244000,member:"Household",account:""},
-
-
-  // ================= APRIL =================
-
-  {date:"2026-04-01",type:"Income",description:"Formal Salary",category:"Formal Salary",amount:11270000,member:"Household",account:""},
-  {date:"2026-04-01",type:"Income",description:"Variable Income",category:"Other Variable Income",amount:1483137,member:"Household",account:""},
-
-  {date:"2026-04-01",type:"Expense",description:"Admin & Bank Fees",category:"Admin & Bank Fees",amount:38000,member:"Household",account:""},
-  {date:"2026-04-01",type:"Expense",description:"Eid & Seasonal",category:"Eid & Seasonal",amount:634399,member:"Household",account:""},
-  {date:"2026-04-01",type:"Expense",description:"Education",category:"Education",amount:1000000,member:"Household",account:""},
-  {date:"2026-04-01",type:"Expense",description:"Groceries",category:"Groceries",amount:1102500,member:"Household",account:""},
-  {date:"2026-04-01",type:"Expense",description:"Healthcare",category:"Healthcare",amount:118044,member:"Household",account:""},
-  {date:"2026-04-01",type:"Expense",description:"Household & Utilities",category:"Household & Utilities",amount:669965,member:"Household",account:""},
-  {date:"2026-04-01",type:"Expense",description:"Kids",category:"Kids",amount:34900,member:"Household",account:""},
-  {date:"2026-04-01",type:"Expense",description:"Lifestyle & Sport",category:"Lifestyle & Sport",amount:393400,member:"Household",account:""},
-  {date:"2026-04-01",type:"Expense",description:"Loan",category:"Loan",amount:1900000,member:"Household",account:""},
-  {date:"2026-04-01",type:"Expense",description:"Meals & Drinks",category:"Meals & Drinks",amount:2546400,member:"Household",account:""},
-  {date:"2026-04-01",type:"Expense",description:"Others",category:"Others",amount:1393400,member:"Household",account:""},
-  {date:"2026-04-01",type:"Expense",description:"Personal Care",category:"Personal Care",amount:280000,member:"Household",account:""},
-  {date:"2026-04-01",type:"Expense",description:"Shopping",category:"Shopping",amount:1393120,member:"Household",account:""},
-  {date:"2026-04-01",type:"Expense",description:"Travel",category:"Travel",amount:40000,member:"Household",account:""},
-  {date:"2026-04-01",type:"Expense",description:"Vehicles",category:"Vehicles",amount:2525000,member:"Household",account:""},
-
-  {date:"2026-04-01",type:"Allocation",description:"Saving",category:"Saving",amount:8113044,member:"Household",account:""},
-
-
-  // ================= MAY =================
-
-  {date:"2026-05-01",type:"Income",description:"Formal Salary",category:"Formal Salary",amount:16960750,member:"Household",account:""},
-
-  {date:"2026-05-01",type:"Expense",description:"Admin & Bank Fees",category:"Admin & Bank Fees",amount:62000,member:"Household",account:""},
-  {date:"2026-05-01",type:"Expense",description:"Giving & Religious",category:"Giving & Religious",amount:9886000,member:"Household",account:""},
-  {date:"2026-05-01",type:"Expense",description:"Household & Utilities",category:"Household & Utilities",amount:861630,member:"Household",account:""},
-  {date:"2026-05-01",type:"Expense",description:"Kids",category:"Kids",amount:751461,member:"Household",account:""},
-  {date:"2026-05-01",type:"Expense",description:"Lifestyle & Sport",category:"Lifestyle & Sport",amount:315000,member:"Household",account:""},
-  {date:"2026-05-01",type:"Expense",description:"Loan",category:"Loan",amount:1720000,member:"Household",account:""},
-  {date:"2026-05-01",type:"Expense",description:"Meals & Drinks",category:"Meals & Drinks",amount:1896520,member:"Household",account:""},
-  {date:"2026-05-01",type:"Expense",description:"Others",category:"Others",amount:4287220,member:"Household",account:""},
-  {date:"2026-05-01",type:"Expense",description:"Personal Care",category:"Personal Care",amount:200000,member:"Household",account:""},
-  {date:"2026-05-01",type:"Expense",description:"Shopping",category:"Shopping",amount:834055,member:"Household",account:""},
-  {date:"2026-05-01",type:"Expense",description:"Travel",category:"Travel",amount:200000,member:"Household",account:""},
-  {date:"2026-05-01",type:"Expense",description:"Vehicles",category:"Vehicles",amount:2157000,member:"Household",account:""},
-
-  {date:"2026-05-01",type:"Allocation",description:"Saving",category:"Saving",amount:118400,member:"Household",account:""},
-
-
-  // ================= JUNE =================
-
-  {date:"2026-06-01",type:"Income",description:"Formal Salary",category:"Formal Salary",amount:15327800,member:"Household",account:""},
-  {date:"2026-06-01",type:"Income",description:"Variable Income",category:"Other Variable Income",amount:12859710,member:"Household",account:""},
-
-  {date:"2026-06-01",type:"Expense",description:"Admin & Bank Fees",category:"Admin & Bank Fees",amount:73000,member:"Household",account:""},
-  {date:"2026-06-01",type:"Expense",description:"Education",category:"Education",amount:175000,member:"Household",account:""},
-  {date:"2026-06-01",type:"Expense",description:"Giving & Religious",category:"Giving & Religious",amount:8376540,member:"Household",account:""},
-  {date:"2026-06-01",type:"Expense",description:"Groceries",category:"Groceries",amount:773300,member:"Household",account:""},
-  {date:"2026-06-01",type:"Expense",description:"Household & Utilities",category:"Household & Utilities",amount:1065706,member:"Household",account:""},
-  {date:"2026-06-01",type:"Expense",description:"Kids",category:"Kids",amount:701000,member:"Household",account:""},
-  {date:"2026-06-01",type:"Expense",description:"Lifestyle & Sport",category:"Lifestyle & Sport",amount:365100,member:"Household",account:""},
-  {date:"2026-06-01",type:"Expense",description:"Loan",category:"Loan",amount:1950000,member:"Household",account:""},
-  {date:"2026-06-01",type:"Expense",description:"Meals & Drinks",category:"Meals & Drinks",amount:3348800,member:"Household",account:""},
-  {date:"2026-06-01",type:"Expense",description:"Others",category:"Others",amount:694068,member:"Household",account:""},
-  {date:"2026-06-01",type:"Expense",description:"Personal Care",category:"Personal Care",amount:1554900,member:"Household",account:""},
-  {date:"2026-06-01",type:"Expense",description:"Shopping",category:"Shopping",amount:1667000,member:"Household",account:""},
-  {date:"2026-06-01",type:"Expense",description:"Vehicles",category:"Vehicles",amount:4866400,member:"Household",account:""},
-
-  {date:"2026-06-01",type:"Allocation",description:"Saving",category:"Saving",amount:11600000,member:"Household",account:""},
-
-
-  // ================= JULY =================
-
-  {date:"2026-07-01",type:"Income",description:"Formal Salary",category:"Formal Salary",amount:10447600,member:"Household",account:""},
-  {date:"2026-07-01",type:"Income",description:"Variable Income",category:"Other Variable Income",amount:12413240,member:"Household",account:""},
-
-  {date:"2026-07-01",type:"Expense",description:"Admin & Bank Fees",category:"Admin & Bank Fees",amount:1500,member:"Household",account:""},
-  {date:"2026-07-01",type:"Expense",description:"Giving & Religious",category:"Giving & Religious",amount:344000,member:"Household",account:""},
-  {date:"2026-07-01",type:"Expense",description:"Groceries",category:"Groceries",amount:1300500,member:"Household",account:""},
-  {date:"2026-07-01",type:"Expense",description:"Healthcare",category:"Healthcare",amount:266037,member:"Household",account:""},
-  {date:"2026-07-01",type:"Expense",description:"Household & Utilities",category:"Household & Utilities",amount:1060430,member:"Household",account:""},
-  {date:"2026-07-01",type:"Expense",description:"Kids",category:"Kids",amount:1291670,member:"Household",account:""},
-  {date:"2026-07-01",type:"Expense",description:"Lifestyle & Sport",category:"Lifestyle & Sport",amount:50000,member:"Household",account:""},
-  {date:"2026-07-01",type:"Expense",description:"Loan",category:"Loan",amount:1950000,member:"Household",account:""},
-  {date:"2026-07-01",type:"Expense",description:"Meals & Drinks",category:"Meals & Drinks",amount:2350370,member:"Household",account:""},
-  {date:"2026-07-01",type:"Expense",description:"Others",category:"Others",amount:50000,member:"Household",account:""},
-  {date:"2026-07-01",type:"Expense",description:"Personal Care",category:"Personal Care",amount:1299000,member:"Household",account:""},
-  {date:"2026-07-01",type:"Expense",description:"Shopping",category:"Shopping",amount:563629,member:"Household",account:""},
-  {date:"2026-07-01",type:"Expense",description:"Tax & Service",category:"Tax & Service",amount:45000,member:"Household",account:""},
-  {date:"2026-07-01",type:"Expense",description:"Travel",category:"Travel",amount:1088680,member:"Household",account:""},
-  {date:"2026-07-01",type:"Expense",description:"Vehicles",category:"Vehicles",amount:4142250,member:"Household",account:""},
-
-  {date:"2026-07-01",type:"Allocation",description:"Saving",category:"Saving",amount:11891187,member:"Household",account:""},
-
-
-  // ================= AUGUST =================
-
-  {date:"2026-08-01",type:"Income",description:"Formal Salary",category:"Formal Salary",amount:10005560,member:"Household",account:""},
-  {date:"2026-08-01",type:"Income",description:"Variable Income",category:"Other Variable Income",amount:6504075,member:"Household",account:""},
-
-  {date:"2026-08-01",type:"Expense",description:"Admin & Bank Fees",category:"Admin & Bank Fees",amount:52000,member:"Household",account:""},
-  {date:"2026-08-01",type:"Expense",description:"Giving & Religious",category:"Giving & Religious",amount:150000,member:"Household",account:""},
-  {date:"2026-08-01",type:"Expense",description:"Groceries",category:"Groceries",amount:343600,member:"Household",account:""},
-  {date:"2026-08-01",type:"Expense",description:"Household & Utilities",category:"Household & Utilities",amount:2182280,member:"Household",account:""},
-  {date:"2026-08-01",type:"Expense",description:"Kids",category:"Kids",amount:94924,member:"Household",account:""},
-  {date:"2026-08-01",type:"Expense",description:"Lifestyle & Sport",category:"Lifestyle & Sport",amount:27000,member:"Household",account:""},
-  {date:"2026-08-01",type:"Expense",description:"Loan",category:"Loan",amount:1950000,member:"Household",account:""},
-  {date:"2026-08-01",type:"Expense",description:"Meals & Drinks",category:"Meals & Drinks",amount:2474900,member:"Household",account:""},
-  {date:"2026-08-01",type:"Expense",description:"Others",category:"Others",amount:3246000,member:"Household",account:""},
-  {date:"2026-08-01",type:"Expense",description:"Personal Care",category:"Personal Care",amount:458000,member:"Household",account:""},
-  {date:"2026-08-01",type:"Expense",description:"Shopping",category:"Shopping",amount:2744420,member:"Household",account:""},
-  {date:"2026-08-01",type:"Expense",description:"Vehicles",category:"Vehicles",amount:1766000,member:"Household",account:""},
-
-  {date:"2026-08-01",type:"Allocation",description:"Saving",category:"Saving",amount:8083899,member:"Household",account:""},
-
-
-// ================= SEPTEMBER =================
-
-  {date:"2026-09-01",type:"Income",description:"UNTAN",category:"Formal Salary",amount:3952600,member:"Novia",account:"BNI 198"},
-
-  {date:"2026-09-01",type:"Income",description:"MOD",category:"Mod / Side Income",amount:210000,member:"Ali",account:"DANA 444"},
-
-  {date:"2026-09-01",type:"Expense",description:"Botol Susu Avent PPSU 260",category:"Kids",amount:287310,member:"Novia",account:"BNI 198"},
-
-  {date:"2026-09-01",type:"Expense",description:"Korek Telinga + Plastik",category:"Household & Utilities",amount:17996,member:"Novia",account:"BNI 198"}
-
-];
-
-
-/* ========================================================= */
+   STATE
+========================================================= */
 
 let state = {
   user:null,
   month:"September",
   year:2026,
-  transactions:[...dummyTransactions],
-  page:"dashboard"
+  transactions:[],
+  page:"dashboard",
+  loading:false
 };
+
+
+/* =========================================================
+   HELPERS
+========================================================= */
 
 const money = n =>
   new Intl.NumberFormat("id-ID",{
     style:"currency",
     currency:"IDR",
     maximumFractionDigits:0
-  }).format(n);
+  }).format(Number(n)||0);
 
 const monthNum = {
   January:1,
@@ -281,36 +121,120 @@ const monthNum = {
   December:12
 };
 
+
+/* =========================================================
+   LOAD TRANSACTIONS FROM SUPABASE
+========================================================= */
+
+async function loadTransactions(){
+
+  state.loading = true;
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("*")
+    .order("date",{ascending:false});
+
+  state.loading = false;
+
+  if(error){
+
+    console.error(error);
+
+    alert(
+      "Gagal mengambil data transaksi dari database.\n\n" +
+      error.message
+    );
+
+    return;
+  }
+
+  state.transactions = data || [];
+
+}
+
+
+/* =========================================================
+   ADD TRANSACTION TO SUPABASE
+========================================================= */
+
+async function saveTransaction(transaction){
+
+  const { error } = await supabase
+    .from("transactions")
+    .insert([transaction]);
+
+  if(error){
+
+    console.error(error);
+
+    alert(
+      "Transaksi gagal disimpan.\n\n" +
+      error.message
+    );
+
+    return false;
+  }
+
+  return true;
+}
+
+
+/* =========================================================
+   METRICS
+========================================================= */
+
 function metrics(){
 
-  const tx = state.transactions.filter(t =>
-    t.date.startsWith(
-      `${state.year}-${String(monthNum[state.month]).padStart(2,"0")}`
-    )
-  );
+  const month =
+    String(monthNum[state.month]).padStart(2,"0");
 
-  const income = tx
-    .filter(t=>t.type==="Income")
-    .reduce((a,t)=>a+t.amount,0);
+  const tx =
+    state.transactions.filter(t =>
+      String(t.date || "")
+      .startsWith(`${state.year}-${month}`)
+    );
 
-  const expense = tx
-    .filter(t=>t.type==="Expense")
-    .reduce((a,t)=>a+t.amount,0);
+  const income =
+    tx
+      .filter(t=>t.type==="Income")
+      .reduce(
+        (a,t)=>a+Number(t.amount||0),
+        0
+      );
 
-  const allocation = tx
-    .filter(t=>t.type==="Allocation")
-    .reduce((a,t)=>a+t.amount,0);
+  const expense =
+    tx
+      .filter(t=>t.type==="Expense")
+      .reduce(
+        (a,t)=>a+Number(t.amount||0),
+        0
+      );
 
-  const net = income-expense-allocation;
+  const allocation =
+    tx
+      .filter(t=>t.type==="Allocation")
+      .reduce(
+        (a,t)=>a+Number(t.amount||0),
+        0
+      );
 
-  const savings = income
-    ? Math.round((net/income)*100)
-    : 0;
+  const net =
+    income-expense-allocation;
+
+  const savings =
+    income
+      ? Math.round((net/income)*100)
+      : 0;
 
   let health =
     50 +
     (net>=0 ? 20 : 0) +
-    (savings>=20 ? 20 : savings>=10 ? 10 : 0);
+    (savings>=20
+      ? 20
+      : savings>=10
+      ? 10
+      : 0);
 
   return {
     tx,
@@ -319,9 +243,17 @@ function metrics(){
     allocation,
     net,
     savings,
-    health:Math.max(0,Math.min(100,health))
+    health:Math.max(
+      0,
+      Math.min(100,health)
+    )
   };
 }
+
+
+/* =========================================================
+   GROUP
+========================================================= */
 
 function groupByCategory(tx,type){
 
@@ -330,8 +262,16 @@ function groupByCategory(tx,type){
   tx
     .filter(t=>t.type===type)
     .forEach(t=>{
-      const key=t.category || t.description || "Others";
-      m[key]=(m[key]||0)+t.amount;
+
+      const key =
+        t.category ||
+        t.description ||
+        "Others";
+
+      m[key] =
+        (m[key]||0) +
+        Number(t.amount||0);
+
     });
 
   return Object
@@ -340,21 +280,47 @@ function groupByCategory(tx,type){
     .slice(0,5);
 }
 
+
+/* =========================================================
+   CARD
+========================================================= */
+
 function card(title,value,sub=""){
 
   return `
     <div class="stat">
-      <div class="stat-title">${title}</div>
-      <div class="stat-value">${value}</div>
-      <div class="stat-sub">${sub}</div>
+
+      <div class="stat-title">
+        ${title}
+      </div>
+
+      <div class="stat-value">
+        ${value}
+      </div>
+
+      <div class="stat-sub">
+        ${sub}
+      </div>
+
     </div>
   `;
 }
 
-function app(){
 
-  if(!state.user)
-    return login();
+/* =========================================================
+   APP
+========================================================= */
+
+async function app(){
+
+  if(!state.user){
+
+    login();
+
+    return;
+  }
+
+  await loadTransactions();
 
   document.querySelector("#root").innerHTML=`
 
@@ -363,55 +329,99 @@ function app(){
       <aside class="sidebar">
 
         <div class="brand">
-          <div class="logo">♡</div>
-          <div>
-            <b>ALNOV</b>
-            <span>Household Finance</span>
+
+          <div class="logo">
+            ♡
           </div>
+
+          <div>
+
+            <b>ALNOV</b>
+
+            <span>
+              Household Finance
+            </span>
+
+          </div>
+
         </div>
+
 
         <button
           class="nav ${state.page==="dashboard"?"active":""}"
           data-page="dashboard">
-          ⌂ <span>Dashboard</span>
+
+          ⌂
+          <span>Dashboard</span>
+
         </button>
+
 
         <button
           class="nav ${state.page==="transactions"?"active":""}"
           data-page="transactions">
-          ↕ <span>Transactions</span>
+
+          ↕
+          <span>Transactions</span>
+
         </button>
+
 
         <button
           class="nav ${state.page==="pots"?"active":""}"
           data-page="pots">
-          ♡ <span>Saving Pots</span>
+
+          ♡
+          <span>Saving Pots</span>
+
         </button>
+
 
         <button
           class="nav ${state.page==="accounts"?"active":""}"
           data-page="accounts">
-          ▣ <span>Accounts</span>
+
+          ▣
+          <span>Accounts</span>
+
         </button>
+
 
         <div class="sidebar-bottom">
 
           <div class="member">
-            <span class="avatar">${state.user[0]}</span>
+
+            <span class="avatar">
+              ${state.user[0]}
+            </span>
 
             <div>
-              <b>${state.user}</b>
-              <small>Household member</small>
+
+              <b>
+                ${state.user}
+              </b>
+
+              <small>
+                Household member
+              </small>
+
             </div>
+
           </div>
 
-          <button id="logout" class="logout">
+
+          <button
+            id="logout"
+            class="logout">
+
             Log out
+
           </button>
 
         </div>
 
       </aside>
+
 
       <main class="main">
 
@@ -420,24 +430,34 @@ function app(){
           <div>
 
             <p class="eyebrow">
-              GOOD MORNING, ${state.user.toUpperCase()} ♡
+              GOOD MORNING,
+              ${state.user.toUpperCase()} ♡
             </p>
 
             <h1>
+
               ${
                 state.page==="dashboard"
                 ? "Your money, made calmer."
-                : state.page[0].toUpperCase()+state.page.slice(1)
+                : state.page[0].toUpperCase()
+                  + state.page.slice(1)
               }
+
             </h1>
 
           </div>
 
-          <button class="add" id="add">
+
+          <button
+            class="add"
+            id="add">
+
             ＋ Add transaction
+
           </button>
 
         </header>
+
 
         ${
           state.page==="dashboard"
@@ -457,6 +477,11 @@ function app(){
   bind();
 }
 
+
+/* =========================================================
+   LOGIN
+========================================================= */
+
 function login(){
 
   document.querySelector("#root").innerHTML=`
@@ -465,7 +490,9 @@ function login(){
 
       <div class="login-card">
 
-        <div class="logo big">♡</div>
+        <div class="logo big">
+          ♡
+        </div>
 
         <p class="eyebrow">
           ALNOV FINANCE
@@ -476,9 +503,10 @@ function login(){
         </h1>
 
         <p class="muted">
-          A calm, private space for Ali & Novia
-          to manage household money.
+          A calm, private space for Ali &
+          Novia to manage household money.
         </p>
+
 
         <div class="login-buttons">
 
@@ -492,8 +520,9 @@ function login(){
 
         </div>
 
+
         <p class="demo">
-          Demo mode · workbook data
+          Connected to Supabase
         </p>
 
       </div>
@@ -501,22 +530,43 @@ function login(){
     </div>
   `;
 
+
   document
     .querySelectorAll("[data-login]")
-    .forEach(b=>{
-      b.onclick=()=>{
-        state.user=b.dataset.login;
+    .forEach(button=>{
+
+      button.onclick=()=>{
+
+        state.user =
+          button.dataset.login;
+
         app();
+
       };
+
     });
 }
+
+
+/* =========================================================
+   DASHBOARD
+========================================================= */
 
 function dashboard(){
 
   const m=metrics();
 
-  const spend=groupByCategory(m.tx,"Expense");
-  const inc=groupByCategory(m.tx,"Income");
+  const spend =
+    groupByCategory(
+      m.tx,
+      "Expense"
+    );
+
+  const inc =
+    groupByCategory(
+      m.tx,
+      "Income"
+    );
 
   return `
 
@@ -524,32 +574,48 @@ function dashboard(){
 
       <div>
 
-        <span>MONTH</span>
+        <span>
+          MONTH
+        </span>
+
 
         <select id="month">
 
           ${
             Object.keys(monthNum)
-              .map(x=>
-                `<option ${
-                  x===state.month
-                  ?"selected"
-                  :""
-                }>${x}</option>`
-              )
+              .map(x=>`
+
+                <option
+                  ${
+                    x===state.month
+                    ?"selected"
+                    :""
+                  }>
+
+                  ${x}
+
+                </option>
+
+              `)
               .join("")
           }
 
         </select>
 
+
         <select id="year">
-          <option>2026</option>
+
+          <option>
+            2026
+          </option>
+
         </select>
 
       </div>
 
+
       <div class="pill">
-        ● Workbook data
+        ● Live database
       </div>
 
     </section>
@@ -566,7 +632,7 @@ function dashboard(){
       ${card(
         "Net expense",
         money(m.expense),
-        "After essential spending"
+        "Total spending"
       )}
 
       ${card(
@@ -588,6 +654,7 @@ function dashboard(){
 
     <div class="grid">
 
+
       <div class="panel health">
 
         <div class="panel-head">
@@ -599,11 +666,17 @@ function dashboard(){
             </span>
 
             <h2>
+
               ${m.health}
-              <small>/100</small>
+
+              <small>
+                /100
+              </small>
+
             </h2>
 
           </div>
+
 
           <div
             class="health-ring"
@@ -611,6 +684,7 @@ function dashboard(){
           </div>
 
         </div>
+
 
         <p>
 
@@ -624,8 +698,13 @@ function dashboard(){
 
         </p>
 
+
         <div class="progress">
-          <i style="width:${m.health}%"></i>
+
+          <i
+            style="width:${m.health}%">
+          </i>
+
         </div>
 
       </div>
@@ -642,22 +721,26 @@ function dashboard(){
             </span>
 
             <h3>
-              ${state.month} 2026
+              ${state.month} ${state.year}
             </h3>
 
           </div>
 
+
           <span class="trend">
-            Household
+            ${m.tx.length} transactions
           </span>
 
         </div>
+
 
         <div class="compare">
 
           <div>
 
-            <span>Income</span>
+            <span>
+              Income
+            </span>
 
             <b>
               ${money(m.income)}
@@ -666,15 +749,20 @@ function dashboard(){
             <i
               style="width:${Math.min(
                 100,
-                m.income/(m.income+m.expense||1)*100
+                m.income/
+                (m.income+m.expense||1)
+                *100
               )}%">
             </i>
 
           </div>
 
+
           <div>
 
-            <span>Expense</span>
+            <span>
+              Expense
+            </span>
 
             <b>
               ${money(m.expense)}
@@ -683,7 +771,9 @@ function dashboard(){
             <i
               style="width:${Math.min(
                 100,
-                m.expense/(m.income+m.expense||1)*100
+                m.expense/
+                (m.income+m.expense||1)
+                *100
               )}%">
             </i>
 
@@ -698,9 +788,15 @@ function dashboard(){
 
     <div class="grid three">
 
-      ${listPanel("Top spending",spend)}
+      ${listPanel(
+        "Top spending",
+        spend
+      )}
 
-      ${listPanel("Top income",inc)}
+      ${listPanel(
+        "Top income",
+        inc
+      )}
 
 
       <div class="panel">
@@ -721,6 +817,7 @@ function dashboard(){
 
         </div>
 
+
         <div class="mini-row">
 
           <span>
@@ -732,6 +829,7 @@ function dashboard(){
           </b>
 
         </div>
+
 
         <div class="mini-row">
 
@@ -766,10 +864,13 @@ function dashboard(){
 
         </div>
 
+
         <button
           class="text-btn"
           data-page="pots">
+
           See all →
+
         </button>
 
       </div>
@@ -804,6 +905,7 @@ function dashboard(){
 
                   </div>
 
+
                   <div class="progress">
 
                     <i
@@ -834,6 +936,11 @@ function dashboard(){
   `;
 }
 
+
+/* =========================================================
+   LIST PANEL
+========================================================= */
+
 function listPanel(title,items){
 
   return `
@@ -856,6 +963,7 @@ function listPanel(title,items){
 
       </div>
 
+
       ${
         items
           .map(([k,v])=>`
@@ -876,10 +984,13 @@ function listPanel(title,items){
 
               </div>
 
+
               <em>
                 ${
                   Math.round(
-                    v/(items[0]?.[1]||1)*100
+                    v/
+                    (items[0]?.[1]||1)
+                    *100
                   )
                 }%
               </em>
@@ -898,6 +1009,11 @@ function listPanel(title,items){
 
   `;
 }
+
+
+/* =========================================================
+   TRANSACTIONS
+========================================================= */
 
 function transactions(){
 
@@ -921,10 +1037,13 @@ function transactions(){
 
         </div>
 
+
         <button
           class="add small"
           id="add2">
+
           ＋ Add
+
         </button>
 
       </div>
@@ -937,15 +1056,18 @@ function transactions(){
           <thead>
 
             <tr>
+
               <th>Date</th>
               <th>Type</th>
               <th>Description</th>
               <th>Category</th>
               <th>Member</th>
               <th>Amount</th>
+
             </tr>
 
           </thead>
+
 
           <tbody>
 
@@ -959,26 +1081,35 @@ function transactions(){
                       ${t.date}
                     </td>
 
+
                     <td>
 
                       <span
-                        class="type ${t.type.toLowerCase()}">
+                        class="type ${String(
+                          t.type||""
+                        ).toLowerCase()}">
+
                         ${t.type}
+
                       </span>
 
                     </td>
 
+
                     <td>
-                      ${t.description}
+                      ${t.description||"—"}
                     </td>
+
 
                     <td>
                       ${t.category||"—"}
                     </td>
 
+
                     <td>
-                      ${t.member}
+                      ${t.member||"—"}
                     </td>
+
 
                     <td
                       class="${
@@ -991,7 +1122,9 @@ function transactions(){
                         t.type==="Expense"
                         ? "−"
                         : "+"
-                      }${money(t.amount)}
+                      }
+
+                      ${money(t.amount)}
 
                     </td>
 
@@ -1011,6 +1144,11 @@ function transactions(){
 
   `;
 }
+
+
+/* =========================================================
+   POTS
+========================================================= */
 
 function potsPage(){
 
@@ -1063,6 +1201,7 @@ function potsPage(){
                   }
                 </small>
 
+
                 <div class="progress">
 
                   <i
@@ -1090,6 +1229,11 @@ function potsPage(){
 
   `;
 }
+
+
+/* =========================================================
+   ACCOUNTS
+========================================================= */
 
 function accountsPage(){
 
@@ -1126,6 +1270,7 @@ function accountsPage(){
                   ▣
                 </span>
 
+
                 <div>
 
                   <b>
@@ -1137,6 +1282,7 @@ function accountsPage(){
                   </small>
 
                 </div>
+
 
                 <strong>
                   ${money(a[1])}
@@ -1155,6 +1301,11 @@ function accountsPage(){
   `;
 }
 
+
+/* =========================================================
+   MODAL
+========================================================= */
+
 function modal(){
 
   document.body.insertAdjacentHTML(
@@ -1171,18 +1322,24 @@ function modal(){
             type="button"
             class="close"
             id="close">
+
             ×
+
           </button>
+
 
           <span class="label">
             NEW TRANSACTION
           </span>
 
+
           <h2>
             Add to your household
           </h2>
 
+
           <label>
+
             Type
 
             <select name="type">
@@ -1205,16 +1362,22 @@ function modal(){
 
 
           <label>
+
             Date
 
             <input
               name="date"
               type="date"
-              value="2026-09-12">
+              value="${new Date()
+                .toISOString()
+                .slice(0,10)}"
+              required>
+
           </label>
 
 
           <label>
+
             Amount
 
             <input
@@ -1222,20 +1385,24 @@ function modal(){
               type="number"
               placeholder="0"
               required>
+
           </label>
 
 
           <label>
+
             Description
 
             <input
               name="description"
               placeholder="e.g. Groceries"
               required>
+
           </label>
 
 
           <label>
+
             Category
 
             <select name="category">
@@ -1243,7 +1410,9 @@ function modal(){
               ${
                 categories
                   .map(c=>
-                    `<option>${c}</option>`
+                    `<option>
+                      ${c}
+                    </option>`
                   )
                   .join("")
               }
@@ -1254,6 +1423,7 @@ function modal(){
 
 
           <label>
+
             Account
 
             <select name="account">
@@ -1261,7 +1431,9 @@ function modal(){
               ${
                 accounts
                   .map(a=>
-                    `<option>${a[0]}</option>`
+                    `<option>
+                      ${a[0]}
+                    </option>`
                   )
                   .join("")
               }
@@ -1272,6 +1444,7 @@ function modal(){
 
 
           <label>
+
             Member
 
             <select name="member">
@@ -1292,11 +1465,15 @@ function modal(){
           <button
             class="save"
             type="submit">
+
             Save transaction
+
           </button>
 
+
           <p class="demo">
-            Saved locally in this demo.
+            Transaction will be saved to the
+            household database.
           </p>
 
         </form>
@@ -1305,6 +1482,7 @@ function modal(){
 
     `
   );
+
 
   document
     .querySelector("#close")
@@ -1317,35 +1495,75 @@ function modal(){
 
   document
     .querySelector("#modal form")
-    .onsubmit=e=>{
+    .onsubmit=async e=>{
 
       e.preventDefault();
 
-      const f=new FormData(e.target);
+      const form =
+        new FormData(e.target);
 
-      const obj=Object.fromEntries(f.entries());
+      const obj =
+        Object.fromEntries(form.entries());
 
-      obj.amount=Number(obj.amount);
+      obj.amount =
+        Number(obj.amount);
 
-      state.transactions.unshift(obj);
+
+      const saveButton =
+        e.target.querySelector(".save");
+
+      saveButton.disabled=true;
+
+      saveButton.textContent=
+        "Saving...";
+
+
+      const success =
+        await saveTransaction(obj);
+
+
+      if(!success){
+
+        saveButton.disabled=false;
+
+        saveButton.textContent=
+          "Save transaction";
+
+        return;
+      }
+
 
       document
         .querySelector("#modal")
         .remove();
 
-      app();
+
+      await app();
+
     };
+
 }
+
+
+/* =========================================================
+   BIND
+========================================================= */
 
 function bind(){
 
   document
     .querySelectorAll("[data-page]")
-    .forEach(b=>{
-      b.onclick=()=>{
-        state.page=b.dataset.page;
+    .forEach(button=>{
+
+      button.onclick=()=>{
+
+        state.page =
+          button.dataset.page;
+
         app();
+
       };
+
     });
 
 
@@ -1354,8 +1572,11 @@ function bind(){
     ?.addEventListener(
       "click",
       ()=>{
+
         state.user=null;
+
         app();
+
       }
     );
 
@@ -1381,11 +1602,20 @@ function bind(){
     ?.addEventListener(
       "change",
       e=>{
-        state.month=e.target.value;
+
+        state.month =
+          e.target.value;
+
         app();
+
       }
     );
 
 }
+
+
+/* =========================================================
+   START
+========================================================= */
 
 app();
