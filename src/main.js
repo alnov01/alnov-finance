@@ -1,8 +1,8 @@
 import "./style.css";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /* =========================================================
-   ALNOV HOUSEHOLD FINANCE
-   Supabase database-connected version
+   ALNOV FINANCE — SUPABASE DATABASE VERSION
    ========================================================= */
 
 const SUPABASE_URL =
@@ -11,493 +11,329 @@ const SUPABASE_URL =
 const SUPABASE_KEY =
   "sb_publishable_X1oq32vSXVyMFjCAmbOkcw_i4lhIxSh";
 
+const supabase = createClient(
+  SUPABASE_URL,
+  SUPABASE_KEY
+);
+
+/* =========================================================
+   HOUSEHOLD
+   ========================================================= */
+
 const HOUSEHOLD_ID =
   "fed7fe83-4f2c-4a6b-bf1f-cbb1329a764c";
 
 /* =========================================================
-   SUPABASE REST HELPER
+   BASIC DATA
    ========================================================= */
 
-let authToken = localStorage.getItem("alnov_access_token") || null;
-let currentUser = JSON.parse(
-  localStorage.getItem("alnov_user") || "null"
-);
-
-async function supabaseFetch(path, options = {}) {
-
-  const headers = {
-    apikey: SUPABASE_KEY,
-    "Content-Type": "application/json",
-    ...(options.headers || {})
-  };
-
-  if (authToken) {
-    headers.Authorization = `Bearer ${authToken}`;
-  }
-
-  const response = await fetch(
-    `${SUPABASE_URL}${path}`,
-    {
-      ...options,
-      headers
-    }
-  );
-
-  const text = await response.text();
-
-  let data = null;
-
-  try {
-    data = text ? JSON.parse(text) : null;
-  } catch {
-    data = text;
-  }
-
-  if (!response.ok) {
-
-    const message =
-      data?.message ||
-      data?.error_description ||
-      data?.hint ||
-      data?.error ||
-      text ||
-      "Supabase request failed";
-
-    throw new Error(message);
-  }
-
-  return data;
-}
-
-
-/* =========================================================
-   AUTH
-   ========================================================= */
-
-const LOGIN_EMAILS = {
-  Ali: "ali@alnov.finance",
-  Novia: "novia@alnov.finance"
-};
-
-async function loginUser(member, password) {
-
-  const email = LOGIN_EMAILS[member];
-
-  if (!email) {
-    throw new Error("User login tidak ditemukan.");
-  }
-
-  const response = await fetch(
-    `${SUPABASE_URL}/auth/v1/token?grant_type=password`,
-    {
-      method: "POST",
-      headers: {
-        apikey: SUPABASE_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        email,
-        password
-      })
-    }
-  );
-
-  const data = await response.json();
-
-  if (!response.ok) {
-
-    throw new Error(
-      data?.error_description ||
-      data?.msg ||
-      "Email atau password salah."
-    );
-  }
-
-  authToken = data.access_token;
-
-  currentUser = {
-    id: data.user.id,
-    email: data.user.email,
-    name: member
-  };
-
-  localStorage.setItem(
-    "alnov_access_token",
-    authToken
-  );
-
-  localStorage.setItem(
-    "alnov_user",
-    JSON.stringify(currentUser)
-  );
-
-  state.user = member;
-}
-
-
-function logoutUser() {
-
-  authToken = null;
-  currentUser = null;
-
-  localStorage.removeItem("alnov_access_token");
-  localStorage.removeItem("alnov_user");
-
-  state.user = null;
-
-  app();
-}
-
-
-/* =========================================================
-   MASTER DATA
-   ========================================================= */
-
-let accounts = [];
-let categories = [];
-let pots = [];
-
-
-/* =========================================================
-   LOAD MASTER DATA
-   ========================================================= */
-
-async function loadAccounts() {
-
-  const data = await supabaseFetch(
-    `/rest/v1/accounts?household_id=eq.${HOUSEHOLD_ID}&select=*`
-  );
-
-  accounts = data || [];
-}
-
-
-async function loadCategories() {
-
-  const data = await supabaseFetch(
-    `/rest/v1/categories?select=*`
-  );
-
-  categories = data || [];
-}
-
-
-async function loadPots() {
-
-  const data = await supabaseFetch(
-    `/rest/v1/saving_pots?household_id=eq.${HOUSEHOLD_ID}&select=*`
-  ).catch(() => []);
-
-  pots = data || [];
-}
-
-
-/* =========================================================
-   TRANSACTIONS
-   ========================================================= */
-
-async function loadTransactions() {
-
-  if (!authToken) {
-    state.transactions = [];
-    return;
-  }
-
-  const data = await supabaseFetch(
-    `/rest/v1/transactions?household_id=eq.${HOUSEHOLD_ID}&select=*&order=transaction_date.desc,created_at.desc`
-  );
-
-  state.transactions = (data || []).map(normalizeTransaction);
-}
-
-
-function normalizeTransaction(t) {
-
-  return {
-    id: t.id,
-
-    date:
-      t.transaction_date ||
-      "",
-
-    type:
-      t.transaction_type ||
-      "Expense",
-
-    description:
-      t.description ||
-      "",
-
-    category:
-      t.category_name ||
-      t.category ||
-      "",
-
-    category_id:
-      t.category_id ||
-      null,
-
-    member:
-      t.member_name ||
-      "Household",
-
-    account:
-      t.account_name ||
-      "",
-
-    account_id:
-      t.account_id ||
-      null,
-
-    amount:
-      Number(t.amount || 0),
-
-    notes:
-      t.notes ||
-      "",
-
-    is_reimbursement:
-      Boolean(t.is_reimbursement),
-
-    reimbursement_amount:
-      Number(t.reimbursement_amount || 0),
-
-    route_to_account_id:
-      t.route_to_account_id ||
-      null,
-
-    route_to_pot_id:
-      t.route_to_pot_id ||
-      null,
-
-    created_at:
-      t.created_at ||
-      ""
-  };
-}
-
-
-/* =========================================================
-   INSERT TRANSACTION
-   ========================================================= */
-
-async function saveTransaction(obj) {
-
-  if (!authToken) {
-    throw new Error("Session login tidak ditemukan.");
-  }
-
-  let categoryId = obj.category_id || null;
-  let accountId = obj.account_id || null;
-
-  /* Find category by name if needed */
-
-  if (!categoryId && obj.category) {
-
-    const foundCategory = categories.find(
-      c =>
-        c.name === obj.category ||
-        c.category_name === obj.category
-    );
-
-    if (foundCategory) {
-      categoryId = foundCategory.id;
-    }
-  }
-
-
-  /* Find account by name if needed */
-
-  if (!accountId && obj.account) {
-
-    const foundAccount = accounts.find(
-      a =>
-        a.name === obj.account ||
-        a.account_name === obj.account ||
-        a.display_name === obj.account
-    );
-
-    if (foundAccount) {
-      accountId = foundAccount.id;
-    }
-  }
-
-
-  const payload = {
-
-    household_id:
-      HOUSEHOLD_ID,
-
-    entered_by:
-      currentUser?.id || null,
-
-    transaction_date:
-      obj.date,
-
-    amount:
-      Number(obj.amount),
-
-    transaction_type:
-      obj.type,
-
-    category_id:
-      categoryId,
-
-    description:
-      obj.description,
-
-    account_id:
-      accountId,
-
-    member_name:
-      obj.member,
-
-    is_reimbursement:
-      Boolean(obj.is_reimbursement),
-
-    reimbursement_amount:
-      Number(obj.reimbursement_amount || 0),
-
-    notes:
-      obj.notes || null,
-
-    route_to_account_id:
-      obj.route_to_account_id || null,
-
-    route_to_pot_id:
-      obj.route_to_pot_id || null
-  };
-
-
-  const data = await supabaseFetch(
-    `/rest/v1/transactions`,
-    {
-      method: "POST",
-      headers: {
-        Prefer: "return=representation"
-      },
-      body: JSON.stringify(payload)
-    }
-  );
-
-  return data?.[0] || null;
-}
-
-
-/* =========================================================
-   DELETE TRANSACTION
-   ========================================================= */
-
-async function deleteTransaction(id) {
-
-  await supabaseFetch(
-    `/rest/v1/transactions?id=eq.${id}`,
-    {
-      method: "DELETE"
-    }
-  );
-
-  await loadTransactions();
-  app();
-}
-
+const accounts = [
+  ["BCA 029",4964028],
+  ["BLU 908",1936056],
+  ["BLU 927",5560073],
+  ["BNI 834",305701],
+  ["BNI 198",129879],
+  ["BSI 072",17467267],
+  ["BSI 115",13145909],
+  ["BTN 160",0],
+  ["DANA 444",237950],
+  ["DANA 111",17472],
+  ["JAGO 100",9792],
+  ["MANDIRI 138",100000],
+  ["MANDIRI 146",354576],
+  ["CASH",0]
+];
+
+const pots = [
+  ["Big Purchases",16000000,5245909],
+  ["Education",1500000,650000],
+  ["Eid",3500000,1197700],
+  ["Emergency Fund",48000000,1936056],
+  ["Healthcare",15000000,5674015],
+  ["House",100000000,4923436],
+  ["Ibadah",3500000,1475930],
+  ["Kids",536000000,11067901],
+  ["Pension",0,0],
+  ["Tax & Services",3000000,2246363],
+  ["Travel",50000000,7900000],
+  ["Gold",50,10],
+  ["SBN",0,20000000],
+  ["SGD",0,92],
+  ["KRW",0,150000],
+  ["Other Investment",0,0]
+];
+
+const categories = [
+  "Admin & Bank Fees",
+  "Eid & Seasonal",
+  "Education",
+  "Giving & Religious",
+  "Groceries",
+  "Healthcare",
+  "Household & Utilities",
+  "Kids",
+  "Lifestyle & Sport",
+  "Loan",
+  "Meals & Drinks",
+  "Others",
+  "Parents & Family",
+  "Personal Care",
+  "Shopping",
+  "Subscription & Digital",
+  "Tax & Service",
+  "Travel",
+  "Vehicles",
+  "Formal Salary",
+  "Other Variable Income",
+  "Consulting / Project",
+  "Mod / Side Income",
+  "Saving"
+];
 
 /* =========================================================
    STATE
    ========================================================= */
 
 let state = {
-
-  user:
-    currentUser?.name ||
-    null,
-
-  month:
-    new Date().getMonth() + 1,
-
-  year:
-    new Date().getFullYear(),
-
-  transactions:
-    [],
-
-  page:
-    "dashboard",
-
-  loading:
-    false
+  user: null,
+  authUser: null,
+  month: "September",
+  year: 2026,
+  transactions: [],
+  page: "dashboard",
+  loading: false
 };
 
-
 /* =========================================================
-   MONEY
+   HELPERS
    ========================================================= */
 
 const money = n =>
-  new Intl.NumberFormat(
-    "id-ID",
-    {
-      style: "currency",
-      currency: "IDR",
-      maximumFractionDigits: 0
-    }
-  ).format(Number(n || 0));
+  new Intl.NumberFormat("id-ID",{
+    style:"currency",
+    currency:"IDR",
+    maximumFractionDigits:0
+  }).format(Number(n || 0));
 
+const monthNum = {
+  January:1,
+  February:2,
+  March:3,
+  April:4,
+  May:5,
+  June:6,
+  July:7,
+  August:8,
+  September:9,
+  October:10,
+  November:11,
+  December:12
+};
 
-const monthNames = [
-  "",
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December"
-];
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
 
+/* =========================================================
+   ACCOUNT ID LOOKUP
+   ========================================================= */
+
+let accountRows = [];
+
+async function loadAccounts() {
+
+  const { data, error } = await supabase
+    .from("accounts")
+    .select("*")
+    .eq("household_id", HOUSEHOLD_ID);
+
+  if (error) {
+    console.warn("Accounts gagal dimuat:", error);
+    accountRows = [];
+    return;
+  }
+
+  accountRows = data || [];
+}
+
+function getAccountIdByName(name) {
+
+  const row = accountRows.find(a => {
+
+    return (
+      a.name === name ||
+      a.account_name === name ||
+      a.display_name === name
+    );
+
+  });
+
+  return row?.id || null;
+}
+
+/* =========================================================
+   LOAD TRANSACTIONS FROM SUPABASE
+   ========================================================= */
+
+async function loadTransactions() {
+
+  state.loading = true;
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .select(`
+      id,
+      household_id,
+      entered_by,
+      transaction_date,
+      amount,
+      transaction_type,
+      category_id,
+      description,
+      account_id,
+      route_to_account_id,
+      route_to_pot_id,
+      member_name,
+      is_reimbursement,
+      reimbursement_amount,
+      notes,
+      created_at,
+      updated_at,
+      source_key
+    `)
+    .eq("household_id", HOUSEHOLD_ID)
+    .order("transaction_date", {
+      ascending: false
+    })
+    .order("created_at", {
+      ascending: false
+    });
+
+  state.loading = false;
+
+  if (error) {
+
+    console.error(error);
+
+    alert(
+      "Gagal mengambil transaksi dari database:\n\n" +
+      error.message
+    );
+
+    state.transactions = [];
+    return;
+  }
+
+  state.transactions = (data || []).map(t => ({
+    id: t.id,
+
+    date: t.transaction_date,
+
+    amount: Number(t.amount || 0),
+
+    type:
+      t.transaction_type === "income"
+        ? "Income"
+        : t.transaction_type === "allocation"
+        ? "Allocation"
+        : "Expense",
+
+    description:
+      t.description || "",
+
+    category:
+      t.description || "Others",
+
+    member:
+      t.member_name || "Household",
+
+    account:
+      getAccountName(t.account_id),
+
+    account_id:
+      t.account_id,
+
+    notes:
+      t.notes || "",
+
+    raw: t
+  }));
+}
+
+/* =========================================================
+   ACCOUNT NAME
+   ========================================================= */
+
+function getAccountName(id) {
+
+  if (!id) return "";
+
+  const row = accountRows.find(a => a.id === id);
+
+  if (!row) return "";
+
+  return (
+    row.name ||
+    row.account_name ||
+    row.display_name ||
+    ""
+  );
+}
+
+/* =========================================================
+   LOAD EVERYTHING
+   ========================================================= */
+
+async function loadDatabase() {
+
+  await loadAccounts();
+  await loadTransactions();
+
+}
 
 /* =========================================================
    METRICS
    ========================================================= */
 
-function metrics() {
+function metrics(){
+
+  const month =
+    String(monthNum[state.month]).padStart(2,"0");
 
   const prefix =
-    `${state.year}-${String(state.month).padStart(2, "0")}`;
+    `${state.year}-${month}`;
 
   const tx =
-    state.transactions.filter(
-      t =>
-        t.date &&
-        t.date.startsWith(prefix)
+    state.transactions.filter(t =>
+      String(t.date).startsWith(prefix)
     );
 
   const income =
     tx
-      .filter(t => t.type === "Income")
+      .filter(t=>t.type==="Income")
       .reduce(
-        (a, t) => a + Number(t.amount || 0),
+        (a,t)=>a+Number(t.amount || 0),
         0
       );
 
   const expense =
     tx
-      .filter(t => t.type === "Expense")
+      .filter(t=>t.type==="Expense")
       .reduce(
-        (a, t) => a + Number(t.amount || 0),
+        (a,t)=>a+Number(t.amount || 0),
         0
       );
 
   const allocation =
     tx
-      .filter(t => t.type === "Allocation")
+      .filter(t=>t.type==="Allocation")
       .reduce(
-        (a, t) => a + Number(t.amount || 0),
+        (a,t)=>a+Number(t.amount || 0),
         0
       );
 
@@ -505,7 +341,7 @@ function metrics() {
     income - expense - allocation;
 
   const savings =
-    income > 0
+    income
       ? Math.round((net / income) * 100)
       : 0;
 
@@ -521,39 +357,30 @@ function metrics() {
     );
 
   return {
-
     tx,
-
     income,
-
     expense,
-
     allocation,
-
     net,
-
     savings,
-
-    health:
-      Math.max(
-        0,
-        Math.min(100, health)
-      )
+    health: Math.max(
+      0,
+      Math.min(100,health)
+    )
   };
 }
 
-
 /* =========================================================
-   GROUP CATEGORY
+   CATEGORY GROUP
    ========================================================= */
 
-function groupByCategory(tx, type) {
+function groupByCategory(tx,type){
 
-  const m = {};
+  const m={};
 
   tx
-    .filter(t => t.type === type)
-    .forEach(t => {
+    .filter(t=>t.type===type)
+    .forEach(t=>{
 
       const key =
         t.category ||
@@ -568,284 +395,47 @@ function groupByCategory(tx, type) {
 
   return Object
     .entries(m)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5);
+    .sort((a,b)=>b[1]-a[1])
+    .slice(0,5);
 }
-
 
 /* =========================================================
    CARD
    ========================================================= */
 
-function card(title, value, sub = "") {
+function card(title,value,sub=""){
 
   return `
     <div class="stat">
       <div class="stat-title">
-        ${title}
+        ${escapeHtml(title)}
       </div>
 
       <div class="stat-value">
-        ${value}
+        ${escapeHtml(value)}
       </div>
 
       <div class="stat-sub">
-        ${sub}
+        ${escapeHtml(sub)}
       </div>
     </div>
   `;
 }
-
-
-/* =========================================================
-   LOGIN
-   ========================================================= */
-
-function login() {
-
-  document.querySelector("#root").innerHTML = `
-
-    <div class="login-wrap">
-
-      <div class="login-card">
-
-        <div class="logo big">
-          ♡
-        </div>
-
-        <p class="eyebrow">
-          ALNOV FINANCE
-        </p>
-
-        <h1>
-          Welcome home.
-        </h1>
-
-        <p class="muted">
-          A calm, private space for Ali & Novia
-          to manage household money.
-        </p>
-
-
-        <div class="login-buttons">
-
-          <button
-            data-login="Ali">
-            Continue as Ali
-          </button>
-
-          <button
-            data-login="Novia">
-            Continue as Novia
-          </button>
-
-        </div>
-
-
-        <div
-          id="password-box"
-          style="display:none; margin-top:20px;">
-
-          <label
-            style="display:block;text-align:left;">
-
-            Password
-
-            <input
-              id="login-password"
-              type="password"
-              placeholder="Enter password"
-              autocomplete="current-password"
-              style="width:100%;margin-top:8px;"
-            >
-
-          </label>
-
-          <button
-            id="login-submit"
-            class="save"
-            style="width:100%;margin-top:14px;">
-
-            Login
-
-          </button>
-
-          <p
-            id="login-error"
-            style="display:none;color:#b42318;margin-top:10px;">
-          </p>
-
-        </div>
-
-
-        <p class="demo">
-          Secure database login
-        </p>
-
-      </div>
-
-    </div>
-  `;
-
-
-  let selectedMember = null;
-
-
-  document
-    .querySelectorAll("[data-login]")
-    .forEach(button => {
-
-      button.onclick = () => {
-
-        selectedMember =
-          button.dataset.login;
-
-        document
-          .querySelector("#password-box")
-          .style.display = "block";
-
-        document
-          .querySelector("#login-password")
-          .focus();
-
-      };
-
-    });
-
-
-  document
-    .querySelector("#login-submit")
-    .onclick = async () => {
-
-      const password =
-        document
-          .querySelector("#login-password")
-          .value;
-
-      const error =
-        document.querySelector("#login-error");
-
-
-      if (!password) {
-
-        error.textContent =
-          "Masukkan password.";
-
-        error.style.display =
-          "block";
-
-        return;
-      }
-
-
-      try {
-
-        error.style.display =
-          "none";
-
-        document
-          .querySelector("#login-submit")
-          .disabled = true;
-
-        document
-          .querySelector("#login-submit")
-          .textContent =
-          "Logging in...";
-
-
-        await loginUser(
-          selectedMember,
-          password
-        );
-
-
-        await initializeData();
-
-      } catch (e) {
-
-        error.textContent =
-          e.message;
-
-        error.style.display =
-          "block";
-
-        document
-          .querySelector("#login-submit")
-          .disabled = false;
-
-        document
-          .querySelector("#login-submit")
-          .textContent =
-          "Login";
-
-      }
-
-    };
-
-
-  document
-    .querySelector("#login-password")
-    .addEventListener(
-      "keydown",
-      e => {
-
-        if (e.key === "Enter") {
-
-          document
-            .querySelector("#login-submit")
-            .click();
-
-        }
-
-      }
-    );
-}
-
 
 /* =========================================================
    APP
    ========================================================= */
 
-async function app() {
+function app(){
 
-  if (!state.user) {
+  if(!state.user){
 
     login();
-    return;
-
-  }
-
-
-  if (state.loading) {
-
-    document.querySelector("#root").innerHTML = `
-
-      <div class="login-wrap">
-
-        <div class="login-card">
-
-          <div class="logo big">
-            ♡
-          </div>
-
-          <h2>
-            Loading your household...
-          </h2>
-
-          <p class="muted">
-            Connecting to the database.
-          </p>
-
-        </div>
-
-      </div>
-    `;
 
     return;
   }
 
-
-  document.querySelector("#root").innerHTML = `
+  document.querySelector("#root").innerHTML=`
 
     <div class="shell">
 
@@ -858,68 +448,67 @@ async function app() {
           </div>
 
           <div>
-
-            <b>
-              ALNOV
-            </b>
-
+            <b>ALNOV</b>
             <span>
               Household Finance
             </span>
-
           </div>
 
         </div>
 
 
         <button
-          class="nav ${state.page === "dashboard" ? "active" : ""}"
+          class="nav ${
+            state.page==="dashboard"
+              ?"active"
+              :""
+          }"
           data-page="dashboard">
 
           ⌂
-
-          <span>
-            Dashboard
-          </span>
+          <span>Dashboard</span>
 
         </button>
 
 
         <button
-          class="nav ${state.page === "transactions" ? "active" : ""}"
+          class="nav ${
+            state.page==="transactions"
+              ?"active"
+              :""
+          }"
           data-page="transactions">
 
           ↕
-          
-          <span>
-            Transactions
-          </span>
+          <span>Transactions</span>
 
         </button>
 
 
         <button
-          class="nav ${state.page === "pots" ? "active" : ""}"
+          class="nav ${
+            state.page==="pots"
+              ?"active"
+              :""
+          }"
           data-page="pots">
 
           ♡
-
-          <span>
-            Saving Pots
-          </span>
+          <span>Saving Pots</span>
 
         </button>
 
 
         <button
-          class="nav ${state.page === "accounts" ? "active" : ""}"
+          class="nav ${
+            state.page==="accounts"
+              ?"active"
+              :""
+          }"
           data-page="accounts">
 
           ▣
-
-          <span>
-            Accounts
-          </span>
+          <span>Accounts</span>
 
         </button>
 
@@ -929,13 +518,15 @@ async function app() {
           <div class="member">
 
             <span class="avatar">
-              ${state.user[0]}
+              ${escapeHtml(
+                state.user[0]
+              )}
             </span>
 
             <div>
 
               <b>
-                ${state.user}
+                ${escapeHtml(state.user)}
               </b>
 
               <small>
@@ -969,7 +560,9 @@ async function app() {
             <p class="eyebrow">
 
               GOOD MORNING,
-              ${state.user.toUpperCase()}
+              ${escapeHtml(
+                state.user.toUpperCase()
+              )}
               ♡
 
             </p>
@@ -977,7 +570,7 @@ async function app() {
             <h1>
 
               ${
-                state.page === "dashboard"
+                state.page==="dashboard"
                   ? "Your money, made calmer."
                   : state.page[0].toUpperCase() +
                     state.page.slice(1)
@@ -1000,11 +593,11 @@ async function app() {
 
 
         ${
-          state.page === "dashboard"
+          state.page==="dashboard"
             ? dashboard()
-            : state.page === "transactions"
+            : state.page==="transactions"
             ? transactions()
-            : state.page === "pots"
+            : state.page==="pots"
             ? potsPage()
             : accountsPage()
         }
@@ -1012,20 +605,243 @@ async function app() {
       </main>
 
     </div>
-  `;
 
+  `;
 
   bind();
 }
 
+/* =========================================================
+   LOGIN
+   ========================================================= */
+
+function login(){
+
+  document.querySelector("#root").innerHTML=`
+
+    <div class="login-wrap">
+
+      <div class="login-card">
+
+        <div class="logo big">
+          ♡
+        </div>
+
+        <p class="eyebrow">
+          ALNOV FINANCE
+        </p>
+
+        <h1>
+          Welcome home.
+        </h1>
+
+        <p class="muted">
+          A calm, private space for Ali & Novia
+          to manage household money.
+        </p>
+
+
+        <div class="login-buttons">
+
+          <button
+            data-user="Ali">
+
+            Continue as Ali
+
+          </button>
+
+
+          <button
+            data-user="Novia">
+
+            Continue as Novia
+
+          </button>
+
+        </div>
+
+
+        <label
+          style="
+            display:block;
+            margin-top:24px;
+            margin-bottom:8px;
+            text-align:left;
+          ">
+
+          Password
+
+        </label>
+
+
+        <input
+          id="password"
+          type="password"
+          placeholder="Enter password"
+          autocomplete="current-password"
+          style="
+            width:100%;
+            box-sizing:border-box;
+            padding:14px;
+            border:1px solid #ddd;
+            border-radius:10px;
+            font-size:16px;
+          "
+        />
+
+
+        <button
+          id="loginButton"
+          class="save"
+          style="
+            width:100%;
+            margin-top:16px;
+          ">
+
+          Login
+
+        </button>
+
+
+        <p
+          id="loginError"
+          style="
+            display:none;
+            color:#d33;
+            margin-top:14px;
+          ">
+        </p>
+
+
+        <p class="demo">
+          Secure database login
+        </p>
+
+      </div>
+
+    </div>
+
+  `;
+
+
+  let selectedUser = null;
+
+
+  document
+    .querySelectorAll("[data-user]")
+    .forEach(button => {
+
+      button.onclick = () => {
+
+        selectedUser =
+          button.dataset.user;
+
+        document
+          .querySelectorAll("[data-user]")
+          .forEach(b =>
+            b.classList.remove("selected")
+          );
+
+        button.classList.add("selected");
+
+      };
+
+    });
+
+
+  document
+    .querySelector("#loginButton")
+    .onclick = async () => {
+
+      const password =
+        document.querySelector(
+          "#password"
+        ).value;
+
+
+      const errorBox =
+        document.querySelector(
+          "#loginError"
+        );
+
+
+      if(!selectedUser){
+
+        errorBox.textContent =
+          "Pilih Ali atau Novia dulu.";
+
+        errorBox.style.display =
+          "block";
+
+        return;
+      }
+
+
+      if(!password){
+
+        errorBox.textContent =
+          "Masukkan password.";
+
+        errorBox.style.display =
+          "block";
+
+        return;
+      }
+
+
+      errorBox.style.display =
+        "none";
+
+
+      const email =
+        selectedUser === "Ali"
+          ? "ali@alnov.finance"
+          : "novia@alnov.finance";
+
+
+      const { data, error } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+
+      if(error){
+
+        console.error(error);
+
+        errorBox.textContent =
+          "Password salah atau akun belum terdaftar.";
+
+        errorBox.style.display =
+          "block";
+
+        return;
+      }
+
+
+      state.user =
+        selectedUser;
+
+      state.authUser =
+        data.user;
+
+
+      await loadDatabase();
+
+      app();
+
+    };
+
+}
 
 /* =========================================================
    DASHBOARD
    ========================================================= */
 
-function dashboard() {
+function dashboard(){
 
-  const m = metrics();
+  const m=metrics();
 
   const spend =
     groupByCategory(
@@ -1050,23 +866,19 @@ function dashboard() {
           MONTH
         </span>
 
+
         <select id="month">
 
           ${
-            monthNames
-              .slice(1)
-              .map(
-                (name, index) => `
-                  <option
-                    value="${index + 1}"
-                    ${
-                      index + 1 === state.month
-                        ? "selected"
-                        : ""
-                    }>
-                    ${name}
-                  </option>
-                `
+            Object.keys(monthNum)
+              .map(x=>
+                `<option ${
+                  x===state.month
+                    ?"selected"
+                    :""
+                }>
+                  ${x}
+                </option>`
               )
               .join("")
           }
@@ -1076,9 +888,7 @@ function dashboard() {
 
         <select id="year">
 
-          <option selected>
-            2026
-          </option>
+          <option>2026</option>
 
         </select>
 
@@ -1086,7 +896,9 @@ function dashboard() {
 
 
       <div class="pill">
+
         ● Live database
+
       </div>
 
     </section>
@@ -1103,20 +915,20 @@ function dashboard() {
       ${card(
         "Net expense",
         money(m.expense),
-        "Household spending"
+        "After essential spending"
       )}
 
       ${card(
         "Net cash flow",
         money(m.net),
-        m.net >= 0
+        m.net>=0
           ? "You are in the green"
           : "Needs attention"
       )}
 
       ${card(
         "Savings rate",
-        m.savings + "%",
+        m.savings+"%",
         "Target: 20%+"
       )}
 
@@ -1136,15 +948,19 @@ function dashboard() {
             </span>
 
             <h2>
+
               ${m.health}
+
               <small>/100</small>
+
             </h2>
 
           </div>
 
+
           <div
             class="health-ring"
-            style="--p:${m.health * 3.6}deg">
+            style="--p:${m.health*3.6}deg">
           </div>
 
         </div>
@@ -1153,9 +969,9 @@ function dashboard() {
         <p>
 
           ${
-            m.health >= 80
+            m.health>=80
               ? "Looking healthy. Your money has breathing room."
-              : m.health >= 60
+              : m.health>=60
               ? "Pretty steady. There is room to strengthen your buffer."
               : "Let's create a little more breathing room this month."
           }
@@ -1185,10 +1001,11 @@ function dashboard() {
             </span>
 
             <h3>
-              ${monthNames[state.month]} ${state.year}
+              ${state.month} 2026
             </h3>
 
           </div>
+
 
           <span class="trend">
             Household
@@ -1210,12 +1027,14 @@ function dashboard() {
             </b>
 
             <i
-              style="width:${Math.min(
-                100,
-                m.income /
-                  ((m.income + m.expense) || 1) *
+              style="
+                width:${Math.min(
+                  100,
+                  m.income /
+                  (m.income+m.expense||1) *
                   100
-              )}%">
+                )}%
+              ">
             </i>
 
           </div>
@@ -1232,12 +1051,14 @@ function dashboard() {
             </b>
 
             <i
-              style="width:${Math.min(
-                100,
-                m.expense /
-                  ((m.income + m.expense) || 1) *
+              style="
+                width:${Math.min(
+                  100,
+                  m.expense /
+                  (m.income+m.expense||1) *
                   100
-              )}%">
+                )}%
+              ">
             </i>
 
           </div>
@@ -1255,6 +1076,7 @@ function dashboard() {
         "Top spending",
         spend
       )}
+
 
       ${listPanel(
         "Top income",
@@ -1327,6 +1149,7 @@ function dashboard() {
 
         </div>
 
+
         <button
           class="text-btn"
           data-page="pots">
@@ -1342,74 +1165,57 @@ function dashboard() {
 
         ${
           pots
-            .slice(0, 5)
-            .map(p => {
+            .slice(0,5)
+            .map(p=>`
 
-              const name =
-                p.name ||
-                p.pot_name ||
-                "Saving Pot";
+              <div class="pot">
 
-              const target =
-                Number(
-                  p.target_amount ||
-                  p.target ||
-                  0
-                );
+                <div class="pot-icon">
+                  ♡
+                </div>
 
-              const current =
-                Number(
-                  p.current_amount ||
-                  p.amount ||
-                  p.balance ||
-                  0
-                );
 
-              return `
+                <div class="pot-info">
 
-                <div class="pot">
+                  <div>
 
-                  <div class="pot-icon">
-                    ♡
+                    <b>
+                      ${escapeHtml(p[0])}
+                    </b>
+
+                    <span>
+
+                      ${money(p[2])}
+                      /
+                      ${money(p[1])}
+
+                    </span>
+
                   </div>
 
-                  <div class="pot-info">
 
-                    <div>
+                  <div class="progress">
 
-                      <b>
-                        ${name}
-                      </b>
-
-                      <span>
-                        ${money(current)}
-                        /
-                        ${money(target)}
-                      </span>
-
-                    </div>
-
-
-                    <div class="progress">
-
-                      <i
-                        style="width:${
-                          target
+                    <i
+                      style="
+                        width:${
+                          p[1]
                             ? Math.min(
                                 100,
-                                current / target * 100
+                                p[2]/p[1]*100
                               )
                             : 0
-                        }%">
-                      </i>
-
-                    </div>
+                        }%
+                      ">
+                    </i>
 
                   </div>
 
                 </div>
-              `;
-            })
+
+              </div>
+
+            `)
             .join("")
         }
 
@@ -1420,12 +1226,11 @@ function dashboard() {
   `;
 }
 
-
 /* =========================================================
    LIST PANEL
    ========================================================= */
 
-function listPanel(title, items) {
+function listPanel(title,items){
 
   return `
 
@@ -1436,7 +1241,7 @@ function listPanel(title, items) {
         <div>
 
           <span class="label">
-            ${title.toUpperCase()}
+            ${escapeHtml(title.toUpperCase())}
           </span>
 
           <h3>
@@ -1450,48 +1255,43 @@ function listPanel(title, items) {
 
       ${
         items.length
-
           ? items
-              .map(
-                ([k, v]) => `
+              .map(([k,v])=>`
 
-                  <div class="rank">
+                <div class="rank">
 
-                    <span class="dot"></span>
+                  <span class="dot"></span>
 
-                    <div>
+                  <div>
 
-                      <b>
-                        ${k}
-                      </b>
+                    <b>
+                      ${escapeHtml(k)}
+                    </b>
 
-                      <small>
-                        ${money(v)}
-                      </small>
-
-                    </div>
-
-                    <em>
-                      ${
-                        Math.round(
-                          v /
-                          (items[0]?.[1] || 1) *
-                          100
-                        )
-                      }%
-                    </em>
+                    <small>
+                      ${money(v)}
+                    </small>
 
                   </div>
 
-                `
-              )
-              .join("")
+                  <em>
+                    ${
+                      Math.round(
+                        v /
+                        (items[0]?.[1] || 1) *
+                        100
+                      )
+                    }%
+                  </em>
 
-          : `
-              <p class="muted">
-                No data yet.
-              </p>
-            `
+                </div>
+
+              `)
+              .join("")
+          :
+            `<p class="muted">
+              No data yet.
+            </p>`
       }
 
     </div>
@@ -1499,14 +1299,14 @@ function listPanel(title, items) {
   `;
 }
 
-
 /* =========================================================
    TRANSACTIONS
    ========================================================= */
 
-function transactions() {
+function transactions(){
 
-  const m = metrics();
+  const m=metrics();
+
 
   return `
 
@@ -1546,36 +1346,13 @@ function transactions() {
 
             <tr>
 
-              <th>
-                Date
-              </th>
-
-              <th>
-                Type
-              </th>
-
-              <th>
-                Description
-              </th>
-
-              <th>
-                Category
-              </th>
-
-              <th>
-                Member
-              </th>
-
-              <th>
-                Account
-              </th>
-
-              <th>
-                Amount
-              </th>
-
-              <th>
-              </th>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Description</th>
+              <th>Category</th>
+              <th>Member</th>
+              <th>Account</th>
+              <th>Amount</th>
 
             </tr>
 
@@ -1585,103 +1362,92 @@ function transactions() {
           <tbody>
 
             ${
-              m.tx.length
+              m.tx
+                .map(t=>`
 
-                ? m.tx
-                    .map(
-                      t => `
+                  <tr>
 
-                        <tr>
-
-                          <td>
-                            ${t.date}
-                          </td>
+                    <td>
+                      ${escapeHtml(t.date)}
+                    </td>
 
 
-                          <td>
+                    <td>
 
-                            <span
-                              class="type ${t.type.toLowerCase()}">
+                      <span
+                        class="type ${
+                          t.type.toLowerCase()
+                        }">
 
-                              ${t.type}
+                        ${escapeHtml(t.type)}
 
-                            </span>
+                      </span>
 
-                          </td>
-
-
-                          <td>
-                            ${t.description}
-                          </td>
+                    </td>
 
 
-                          <td>
-                            ${t.category || "—"}
-                          </td>
+                    <td>
+                      ${escapeHtml(t.description)}
+                    </td>
 
 
-                          <td>
-                            ${t.member}
-                          </td>
+                    <td>
+                      ${escapeHtml(
+                        t.category || "—"
+                      )}
+                    </td>
 
 
-                          <td>
-                            ${t.account || "—"}
-                          </td>
+                    <td>
+                      ${escapeHtml(t.member)}
+                    </td>
 
 
-                          <td
-                            class="${
-                              t.type === "Expense"
-                                ? "negative"
-                                : "positive"
-                            }">
-
-                            ${
-                              t.type === "Expense"
-                                ? "−"
-                                : "+"
-                            }${money(t.amount)}
-
-                          </td>
+                    <td>
+                      ${escapeHtml(
+                        t.account || "—"
+                      )}
+                    </td>
 
 
-                          <td>
+                    <td
+                      class="${
+                        t.type==="Expense"
+                          ? "negative"
+                          : "positive"
+                      }">
 
-                            ${
-                              t.id
-                                ? `
-                                  <button
-                                    class="delete-tx"
-                                    data-delete="${t.id}">
-                                    ×
-                                  </button>
-                                `
-                                : ""
-                            }
+                      ${
+                        t.type==="Expense"
+                          ? "−"
+                          : "+"
+                      }
 
-                          </td>
+                      ${money(t.amount)}
 
-                        </tr>
+                    </td>
 
-                      `
-                    )
-                    .join("")
+                  </tr>
 
-                : `
-                    <tr>
+                `)
+                .join("")
+            }
 
-                      <td
-                        colspan="8"
-                        style="text-align:center;padding:40px;">
 
-                        No transactions
-                        for this month yet.
+            ${
+              !m.tx.length
+                ? `
+                  <tr>
+                    <td
+                      colspan="7"
+                      style="text-align:center;padding:30px">
 
-                      </td>
+                      No transactions yet.
 
-                    </tr>
-                  `
+                    </td>
+                  </tr>
+                `
+                : ""
             }
 
           </tbody>
@@ -1695,12 +1461,11 @@ function transactions() {
   `;
 }
 
-
 /* =========================================================
    POTS
    ========================================================= */
 
-function potsPage() {
+function potsPage(){
 
   return `
 
@@ -1726,81 +1491,58 @@ function potsPage() {
       <div class="pots-grid">
 
         ${
-          pots.length
+          pots
+            .map(p=>`
 
-            ? pots
-                .map(p => {
+              <div class="goal">
 
-                  const name =
-                    p.name ||
-                    p.pot_name ||
-                    "Saving Pot";
+                <div class="pot-icon">
+                  ♡
+                </div>
 
-                  const target =
-                    Number(
-                      p.target_amount ||
-                      p.target ||
-                      0
-                    );
 
-                  const current =
-                    Number(
-                      p.current_amount ||
-                      p.amount ||
-                      p.balance ||
-                      0
-                    );
+                <b>
+                  ${escapeHtml(p[0])}
+                </b>
 
-                  return `
 
-                    <div class="goal">
+                <strong>
+                  ${money(p[2])}
+                </strong>
 
-                      <div class="pot-icon">
-                        ♡
-                      </div>
 
-                      <b>
-                        ${name}
-                      </b>
+                <small>
 
-                      <strong>
-                        ${money(current)}
-                      </strong>
+                  Target ${
+                    p[1]
+                      ? money(p[1])
+                      : "—"
+                  }
 
-                      <small>
-                        Target ${
-                          target
-                            ? money(target)
-                            : "—"
-                        }
-                      </small>
+                </small>
 
-                      <div class="progress">
 
-                        <i
-                          style="width:${
-                            target
-                              ? Math.min(
-                                  100,
-                                  current / target * 100
-                                )
-                              : 0
-                          }%">
-                        </i>
+                <div class="progress">
 
-                      </div>
+                  <i
+                    style="
+                      width:${
+                        p[1]
+                          ? Math.min(
+                              100,
+                              p[2]/p[1]*100
+                            )
+                          : 0
+                      }%
+                    ">
+                  </i>
 
-                    </div>
+                </div>
 
-                  `;
-                })
-                .join("")
+              </div>
 
-            : `
-                <p class="muted">
-                  No saving pots found.
-                </p>
-              `
+            `)
+            .join("")
         }
 
       </div>
@@ -1810,12 +1552,11 @@ function potsPage() {
   `;
 }
 
-
 /* =========================================================
    ACCOUNTS
    ========================================================= */
 
-function accountsPage() {
+function accountsPage(){
 
   return `
 
@@ -1842,49 +1583,35 @@ function accountsPage() {
 
         ${
           accounts
-            .map(a => {
+            .map(a=>`
 
-              const name =
-                a.name ||
-                a.account_name ||
-                a.display_name ||
-                "Account";
+              <div class="account">
 
-              const balance =
-                Number(
-                  a.balance ||
-                  a.current_balance ||
-                  0
-                );
+                <span>
+                  ▣
+                </span>
 
-              return `
 
-                <div class="account">
+                <div>
 
-                  <span>
-                    ▣
-                  </span>
+                  <b>
+                    ${escapeHtml(a[0])}
+                  </b>
 
-                  <div>
-
-                    <b>
-                      ${name}
-                    </b>
-
-                    <small>
-                      System balance
-                    </small>
-
-                  </div>
-
-                  <strong>
-                    ${money(balance)}
-                  </strong>
+                  <small>
+                    System balance
+                  </small>
 
                 </div>
 
-              `;
-            })
+
+                <strong>
+                  ${money(a[1])}
+                </strong>
+
+              </div>
+
+            `)
             .join("")
         }
 
@@ -1895,66 +1622,11 @@ function accountsPage() {
   `;
 }
 
-
 /* =========================================================
    ADD TRANSACTION MODAL
    ========================================================= */
 
-function modal() {
-
-  const today =
-    new Date()
-      .toISOString()
-      .split("T")[0];
-
-
-  const categoryOptions =
-    categories
-      .map(c => {
-
-        const id =
-          c.id;
-
-        const name =
-          c.name ||
-          c.category_name ||
-          c.title ||
-          "Category";
-
-        return `
-          <option
-            value="${name}"
-            data-id="${id}">
-            ${name}
-          </option>
-        `;
-      })
-      .join("");
-
-
-  const accountOptions =
-    accounts
-      .map(a => {
-
-        const id =
-          a.id;
-
-        const name =
-          a.name ||
-          a.account_name ||
-          a.display_name ||
-          "Account";
-
-        return `
-          <option
-            value="${name}"
-            data-id="${id}">
-            ${name}
-          </option>
-        `;
-      })
-      .join("");
-
+function modal(){
 
   document.body.insertAdjacentHTML(
     "beforeend",
@@ -1964,9 +1636,7 @@ function modal() {
         class="modal-bg"
         id="modal">
 
-        <form
-          class="modal"
-          id="transaction-form">
+        <form class="modal">
 
           <button
             type="button"
@@ -2018,7 +1688,11 @@ function modal() {
             <input
               name="date"
               type="date"
-              value="${today}"
+              value="${
+                new Date()
+                  .toISOString()
+                  .slice(0,10)
+              }"
               required>
 
           </label>
@@ -2057,12 +1731,13 @@ function modal() {
             <select name="category">
 
               ${
-                categoryOptions ||
-                `
-                  <option value="">
-                    Others
-                  </option>
-                `
+                categories
+                  .map(c=>
+                    `<option value="${escapeHtml(c)}">
+                      ${escapeHtml(c)}
+                    </option>`
+                  )
+                  .join("")
               }
 
             </select>
@@ -2076,11 +1751,15 @@ function modal() {
 
             <select name="account">
 
-              <option value="">
-                Select account
-              </option>
-
-              ${accountOptions}
+              ${
+                accounts
+                  .map(a=>
+                    `<option value="${escapeHtml(a[0])}">
+                      ${escapeHtml(a[0])}
+                    </option>`
+                  )
+                  .join("")
+              }
 
             </select>
 
@@ -2093,11 +1772,11 @@ function modal() {
 
             <select name="member">
 
-              <option value="Ali">
+              <option>
                 Ali
               </option>
 
-              <option value="Novia">
+              <option>
                 Novia
               </option>
 
@@ -2106,32 +1785,18 @@ function modal() {
           </label>
 
 
-          <label>
-
-            Notes
-
-            <input
-              name="notes"
-              placeholder="Optional">
-
-          </label>
-
-
           <button
             class="save"
-            type="submit"
-            id="save-transaction">
+            type="submit">
 
             Save transaction
 
           </button>
 
 
-          <p
-            class="demo"
-            id="save-status">
+          <p class="demo">
 
-            Saved directly to household database.
+            Saved directly to database.
 
           </p>
 
@@ -2145,7 +1810,7 @@ function modal() {
 
   document
     .querySelector("#close")
-    .onclick = () => {
+    .onclick=()=>{
 
       document
         .querySelector("#modal")
@@ -2155,172 +1820,156 @@ function modal() {
 
 
   document
-    .querySelector("#transaction-form")
-    .onsubmit = async e => {
+    .querySelector("#modal form")
+    .onsubmit=async e=>{
 
       e.preventDefault();
 
 
-      const form =
-        e.target;
-
-      const button =
-        document.querySelector(
-          "#save-transaction"
-        );
-
-      const status =
-        document.querySelector(
-          "#save-status"
-        );
+      const f =
+        new FormData(e.target);
 
 
-      const formData =
-        new FormData(form);
-
-
-      const categoryName =
-        formData.get("category");
+      const type =
+        f.get("type");
 
 
       const accountName =
-        formData.get("account");
+        f.get("account");
+
+
+      const accountId =
+        getAccountIdByName(
+          accountName
+        );
 
 
       const category =
-        categories.find(
-          c =>
-            (
-              c.name ||
-              c.category_name ||
-              c.title
-            ) === categoryName
-        );
+        f.get("category");
 
 
-      const account =
-        accounts.find(
-          a =>
-            (
-              a.name ||
-              a.account_name ||
-              a.display_name
-            ) === accountName
-        );
+      /*
+        IMPORTANT:
+        category_id is UUID in your DB.
+        We don't put category text
+        into category_id.
+      */
 
 
-      const obj = {
+      const payload = {
 
-        type:
-          formData.get("type"),
+        household_id:
+          HOUSEHOLD_ID,
 
-        date:
-          formData.get("date"),
+        entered_by:
+          state.authUser?.id || null,
+
+        transaction_date:
+          f.get("date"),
 
         amount:
           Number(
-            formData.get("amount")
+            f.get("amount")
           ),
 
-        description:
-          formData.get("description"),
-
-        category:
-          categoryName,
+        transaction_type:
+          type.toLowerCase(),
 
         category_id:
-          category?.id || null,
+          null,
 
-        account:
-          accountName,
+        description:
+          f.get("description"),
 
         account_id:
-          account?.id || null,
+          accountId,
 
-        member:
-          formData.get("member"),
+        route_to_account_id:
+          null,
+
+        route_to_pot_id:
+          null,
+
+        member_name:
+          f.get("member"),
+
+        is_reimbursement:
+          false,
+
+        reimbursement_amount:
+          null,
 
         notes:
-          formData.get("notes") || ""
+          null,
+
+        source_key:
+          `manual-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2)}`
 
       };
 
 
-      try {
-
-        button.disabled =
-          true;
-
-        button.textContent =
-          "Saving...";
-
-        status.textContent =
-          "Saving to database...";
+      const {
+        data,
+        error
+      } = await supabase
+        .from("transactions")
+        .insert(payload)
+        .select()
+        .single();
 
 
-        await saveTransaction(
-          obj
-        );
-
-
-        await loadTransactions();
-
-
-        status.textContent =
-          "✓ Saved to database";
-
-
-        setTimeout(
-          () => {
-
-            document
-              .querySelector("#modal")
-              ?.remove();
-
-            app();
-
-          },
-          400
-        );
-
-
-      } catch (error) {
+      if(error){
 
         console.error(
+          "INSERT TRANSACTION ERROR:",
           error
         );
 
-        button.disabled =
-          false;
 
-        button.textContent =
-          "Save transaction";
+        alert(
+          "Gagal menyimpan transaksi:\n\n" +
+          error.message
+        );
 
-        status.textContent =
-          "Failed: " +
-          error.message;
-
+        return;
       }
+
+
+      console.log(
+        "Transaction saved:",
+        data
+      );
+
+
+      document
+        .querySelector("#modal")
+        .remove();
+
+
+      await loadTransactions();
+
+      app();
 
     };
 
 }
 
-
 /* =========================================================
    BIND
    ========================================================= */
 
-function bind() {
+function bind(){
 
   document
     .querySelectorAll("[data-page]")
-    .forEach(button => {
+    .forEach(b=>{
 
-      button.onclick = () => {
+      b.onclick=()=>{
 
         state.page =
-          button.dataset.page;
+          b.dataset.page;
 
         app();
 
@@ -2333,7 +1982,17 @@ function bind() {
     .querySelector("#logout")
     ?.addEventListener(
       "click",
-      logoutUser
+      async ()=>{
+
+        await supabase.auth.signOut();
+
+        state.user = null;
+        state.authUser = null;
+        state.transactions = [];
+
+        app();
+
+      }
     );
 
 
@@ -2357,146 +2016,73 @@ function bind() {
     .querySelector("#month")
     ?.addEventListener(
       "change",
-      e => {
+      e=>{
 
         state.month =
-          Number(
-            e.target.value
-          );
+          e.target.value;
 
         app();
 
       }
     );
 
-
-  document
-    .querySelectorAll(
-      "[data-delete]"
-    )
-    .forEach(button => {
-
-      button.onclick = async () => {
-
-        const id =
-          button.dataset.delete;
-
-
-        if (
-          !confirm(
-            "Delete this transaction?"
-          )
-        ) {
-          return;
-        }
-
-
-        try {
-
-          await deleteTransaction(
-            id
-          );
-
-        } catch (error) {
-
-          alert(
-            "Gagal menghapus transaksi: " +
-            error.message
-          );
-
-        }
-
-      };
-
-    });
-
 }
 
-
 /* =========================================================
-   INITIALIZE
+   SESSION CHECK
    ========================================================= */
 
-async function initializeData() {
+async function init(){
 
-  state.loading = true;
-
-  app();
-
-
-  try {
-
-    await Promise.all([
-      loadAccounts(),
-      loadCategories(),
-      loadPots(),
-      loadTransactions()
-    ]);
+  const {
+    data: {
+      session
+    }
+  } =
+    await supabase.auth.getSession();
 
 
-    state.loading =
-      false;
+  if(session?.user){
 
-    app();
+    state.authUser =
+      session.user;
 
 
-  } catch (error) {
+    /*
+      Tentukan nama dari email.
+    */
 
-    console.error(
-      error
-    );
+    if(
+      session.user.email ===
+      "ali@alnov.finance"
+    ){
 
-    state.loading =
-      false;
+      state.user = "Ali";
 
-    document.querySelector("#root").innerHTML = `
+    }
+    else if(
+      session.user.email ===
+      "novia@alnov.finance"
+    ){
 
-      <div class="login-wrap">
+      state.user = "Novia";
 
-        <div class="login-card">
+    }
+    else {
 
-          <div class="logo big">
-            ♡
-          </div>
+      state.user = "Ali";
 
-          <h2>
-            Database connection error
-          </h2>
+    }
 
-          <p class="muted">
-            ${error.message}
-          </p>
 
-          <button
-            class="save"
-            onclick="location.reload()">
-
-            Try again
-
-          </button>
-
-        </div>
-
-      </div>
-
-    `;
+    await loadDatabase();
 
   }
-}
 
-
-/* =========================================================
-   START
-   ========================================================= */
-
-if (state.user && authToken) {
-
-  initializeData();
-
-} else {
-
-  state.user = null;
 
   app();
 
 }
+
+
+init();
